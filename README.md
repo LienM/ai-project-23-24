@@ -1,6 +1,6 @@
 # 👋 Welcome to AI Project 23-24
 
-## **🤓 Course overview and learning outcomes**
+## Course overview and learning outcomes
 
 The main objective of this course is to learn how to design, analyze, and solve a complex data science problem in practice. During this course, you’ll gain experience in the thorough analysis of a large practical data science problem and in the development and presentation of a practical solution. We’ll provide you with short lectures, materials for further learning and a few ideas to get you started on your own submission to a data science competition! 🚀
 
