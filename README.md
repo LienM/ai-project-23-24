@@ -6,6 +6,6 @@ The main objective of this course is to learn how to design, analyze, and solve 
 
 This year, we’ll be tackling the [H&M Personalized Fashion Recommendations](https://www.kaggle.com/competitions/h-and-m-personalized-fashion-recommendations/data) challenge on Kaggle.
 
-## **Practical Information **
+## Practical Information
 Each student needs to create and work in their personal folder in the repository.
 Please use the format: <FirstnameLastname> for your personal folder.
