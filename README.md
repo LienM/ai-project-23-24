@@ -8,4 +8,4 @@ This year, we’ll be tackling the [H&M Personalized Fashion Recommendations](ht
 
 ## Practical Information
 Each student needs to create and work in their personal folder in the repository.
-Please use the format: <FirstnameLastname> for your personal folder.
+Please use the format: "FirstnameLastname" for your personal folder.
