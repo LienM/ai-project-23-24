@@ -24,7 +24,7 @@ def perform_basic_eda(df) -> None:
     # Summary statistics of numerical columns
     print(df.describe())
     # Number of missing values in each column
-    print(df.isnull().sum())
+    print(df.isna().sum())
 
 def verify_ids(df, id_column: str, column_print_name: str, regex: str, check_unique: bool = True, column_type: str = "string") -> None:
     """
@@ -164,95 +164,59 @@ def check_correlation_between_columns_articles(articles) -> None:
 
 # Verifying customers #
 
-def perform_customers_eda(customers) -> None:
-    """
-    Verifies the customers dataset
-    :param customers: customers dataframe
-    :return:
-    """
-
-    print("Verifying customers:")
-
-    verify_customer_ids(customers)
-    verify_ages(customers)
-    verify_postal_codes(customers)
-    verify_fn_status(customers)
-    verify_active_status(customers)
-    verify_club_member_status(customers)
-    verify_fashion_news_frequency(customers)
-
-    check_correlation_between_columns_customers(customers)
-
-    graphs_by_age_group(customers)
-
-    print("\n")
-
 def verify_customer_ids(customers) -> None:
     """
-    Verifies the customer id column in the customers dataset
+    Verifies the customer id column in the customers dataset.
     :param customers: customers dataframe
     """
-    print("\tVerifying customers ids:")
 
     verify_ids(customers, "customer_id", "customer ids", '^[a-f0-9]{64}$')
 
 
 def verify_ages(customers) -> None:
     """
-    Verifies the age of each customer in the customers dataset
+    Verifies the age of each customer in the customers dataset.
     :param customers: customers dataframe
     """
-    print("\tVerifying customer ages:")
 
     # Are there missing ages?
     na_ages = customers["age"].isna().sum()
-
-    print(f"\t\tTotal number of customers is {customers.shape[0]}. {na_ages} ({na_ages/customers.shape[0]*100}%) customers have no age.")
+    print(f"{na_ages} ({na_ages/customers.shape[0]*100}%) customers have no age.")
 
     # Check if all ages are between 12 and 120
     valid_ages = (customers["age"] >= 12) & (customers["age"] <= 120)
-    print(f"\t\tAll ages are within the valid range: {len(valid_ages) == len(customers)}")
-    print(f"\t\tThere are {len(customers[~valid_ages])} customers with invalid ages.")
+    print(f"All ages are within the valid range: {len(valid_ages) == len(customers)}")
+    print(f"There are {len(customers[~valid_ages])} customers with invalid ages.")
     try: # if we have the right python and pandas versions, we can use the apply function for clearer output.
         print(f"{customers['age'].describe().apply('{:.2f}'.format)}") # actual type is float64.
     except (Exception, ):
         print(f"{customers['age'].describe()}")
 
-    # plot the distribution of ages, no need to explicitly check outlier ages because of earlier check.
-    sns.displot(customers["age"], kde=True, bins=20)
-
-    # Check if there is an obvious correlation between missing age and other columns (need to perform more checks later)
-    missing_age_data = customers[customers["age"].isna()]
-    print(missing_age_data.head(10))
-
 
 def verify_postal_codes(customers) -> None:
     """
-    Verifies the postal code of each customer in the customers dataset
-    :param customers:
+    Verifies the postal code of each customer in the customers dataset.
+    :param customers: customers dataframe
     """
-    print("Verifying customer postal codes:")
 
     verify_ids(customers, "postal_code", "postal codes", '^[a-f0-9]{64}$', False)
 
     # check the (top) value counts of the postal codes
-    print(f"\t\tPostal code value counts:\n {customers['postal_code'].value_counts()}")
+    print(f"Postal code value counts:\n{customers['postal_code'].value_counts()}")
 
 
 def verify_fn_status(customers) -> None:
     """
-    Verifies the FN status of each customer in the customers dataset
+    Verifies the FN status of each customer in the customers dataset.
     :param customers: customers dataframe
     :return:
     """
 
-    print("Verifying FN status:")
-
     # Check and count all the different FN status values
-    print(f"\t\tFN value counts:\n {customers['FN'].value_counts(dropna=False)}")
+    print(f"FN value counts:\n{customers['FN'].value_counts(dropna=False)}")
 
     # Percentage of missing FN status values
-    print(f"\t\tPercentage of missing FN values: {customers['FN'].isna().sum()/customers.shape[0]*100}%")
+    print(f"Percentage of missing FN values: {customers['FN'].isna().sum()/customers.shape[0]*100}%")
 
 
 def verify_active_status(customers) -> None:
@@ -262,13 +226,11 @@ def verify_active_status(customers) -> None:
     :return:
     """
 
-    print("Verifying Active status:")
-
     # Check and count all the different active status values
-    print(f"\t\tActive status:\n {customers['Active'].value_counts(dropna=False)}")
+    print(f"Active status:\n{customers['Active'].value_counts(dropna=False)}")
 
     # Percentage of missing active status values
-    print(f"\t\tPercentage of missing Active values: {customers['Active'].isna().sum()/customers.shape[0]*100}%")
+    print(f"Percentage of missing Active values: {customers['Active'].isna().sum()/customers.shape[0]*100}%")
 
 
 def verify_club_member_status(customers) -> None:
@@ -278,13 +240,11 @@ def verify_club_member_status(customers) -> None:
     :return:
     """
 
-    print("Verifying club member status:")
-
     # Check and count all the different club member status values
-    print(f"\t\tClub member status:\n {customers['club_member_status'].value_counts(dropna=False)}")
+    print(f"Club member status:\n{customers['club_member_status'].value_counts(dropna=False)}")
 
     # Percentage of missing club member status values
-    print(f"\t\tPercentage of missing club member status values: {customers['club_member_status'].isna().sum()/customers.shape[0]*100}%")
+    print(f"Percentage of missing club member status values: {customers['club_member_status'].isna().sum()/customers.shape[0]*100}%")
 
 
 def verify_fashion_news_frequency(customers) -> None:
@@ -293,13 +253,12 @@ def verify_fashion_news_frequency(customers) -> None:
     :param customers: customers dataframe
     :return:
     """
-    print("Verifying fashion news frequency:")
 
     # Check and count all the different fashion news frequencies values
-    print(f"\t\tFashion news frequencies:\n {customers['fashion_news_frequency'].value_counts()}")
+    print(f"Fashion news frequencies:\n{customers['fashion_news_frequency'].value_counts()}")
 
     # Percentage of missing fashion news frequency values
-    print(f"\t\tPercentage of missing fashion news frequency values: {customers['fashion_news_frequency'].isna().sum()/customers.shape[0]*100}%")
+    print(f"Percentage of missing fashion news frequency values: {customers['fashion_news_frequency'].isna().sum()/customers.shape[0]*100}%")
 
 
 def check_correlation_between_columns_customers(customers) -> None:
@@ -396,10 +355,8 @@ def perform_transactions_eda(transactions) -> None:
     :return:
     """
 
-    print("Verifying transactions:")
-
     # Check for missing values
-    print(f"\tMissing values per column:\n {transactions.isna().sum()}")
+    print(f"Missing values per column:\n{transactions.isna().sum()}")
 
     verify_purchase_dates(transactions)
     verify_transaction_customer_id(transactions)
@@ -413,24 +370,23 @@ def verify_purchase_dates(transactions) -> None:
     Verifies the purchase date of each transaction.
     :param transactions: transactions dataframe
     """
-    print("\tVerifying purchases dates:")
 
     # Get the transaction dates
     t_dates = transactions['t_dat']
 
     # Are there missing transaction dates?
-    print(f"\t\tThere are {t_dates.isna().sum()} missing transactions dates")
+    print(f"There are {t_dates.isna().sum()} missing transactions dates")
 
     # Check if all dates have the same ISO format
     date_matches = t_dates.str.fullmatch('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
-    print(f"\t\tAll dates have the same ISO format: {t_dates[~date_matches].shape[0] == 0}")
+    print(f"All dates have the same ISO format: {t_dates[~date_matches].shape[0] == 0}")
 
     # Check if the transaction date is after 1947-01-01 (founding year) and before now
-    print(f"\t\tEarliest transaction date: {t_dates.min()}")
-    print(f"\t\tLatest transaction date: {t_dates.max()}")
+    print(f"Earliest transaction date: {t_dates.min()}")
+    print(f"Latest transaction date: {t_dates.max()}")
     valid_dates = (t_dates >= "1947-01-01") & (t_dates <= datetime.now().strftime("%Y-%m-%d"))
-    print(f"\t\tAll transactions dates are within the valid range: {len(valid_dates) == len(t_dates)}")
-    print(f"\t\tThere are {len(t_dates[~valid_dates])} transactions with invalid dates.")
+    print(f"All transactions dates are within the valid range: {len(valid_dates) == len(t_dates)}")
+    print(f"There are {len(t_dates[~valid_dates])} transactions with invalid dates.")
 
 
 def verify_transaction_customer_id(transactions) -> None:
@@ -438,27 +394,24 @@ def verify_transaction_customer_id(transactions) -> None:
     Verifies the customer id that performed a transaction.
     :param transactions: transactions dataframe
     """
-    print("\tVerifying customer ids of transactions:")
 
     verify_ids(transactions, "customer_id", "customer ids", '^[a-f0-9]{64}$', False)
 
 
 def verify_transaction_article_id(transactions) -> None:
     """
-    Verifies the article id that is linked to a performed transaction
+    Verifies the article id that is linked to a performed transaction.
     :param transactions: transactions dataframe
     """
-    print("\tVerifying article ids of transactions:")
 
     verify_ids(transactions, "article_id", "article ids", '^[0-9]{10}$', False)
 
 
 def verify_prices(transactions) -> None:
     """
-    Verifies all the price of each transaction
+    Verifies all the price of each transaction.
     :param transactions: transactions dataframe
     """
-    print("\tVerifying transaction prices:")
 
     verify_ids(transactions, "price", "prices", r'[0-9]+(\.[0-9]+)?', False, "numeric")
 
@@ -468,28 +421,13 @@ def verify_prices(transactions) -> None:
 
 def verify_sales_channel_ids(transactions) -> None:
     """
-    Verifies the sales channel id of each transaction
+    Verifies the sales channel id of each transaction.
     :param transactions: transactions dataframe
     """
-    print("\tVerifying sales channel ids of transactions:")
 
     # Check for missing values
-    print(f"\t\tThere are {transactions['sales_channel_id'].isna().sum()} missing sales channel ids")
+    print(f"There are {transactions['sales_channel_id'].isna().sum()} missing sales channel ids")
 
     # Check all value counts
-    print(f"\t\tSales channel id value counts:\n {transactions['sales_channel_id'].value_counts()}")
+    print(f"Sales channel id value counts:\n {transactions['sales_channel_id'].value_counts()}")
 
-
-if __name__ == "__main__":
-    # Load necessary datasets for exploratory data analysis
-    articles_df = load_dataset("datasets/articles.csv")
-    customers_df = load_dataset("datasets/customers.csv")
-    # transactions_train_df = load_dataset("datasets/transactions_train.csv")
-
-    # Perform exploratory data analysis on each dataset
-
-    # perform_articles_eda(articles_df)
-
-    perform_customers_eda(customers_df)
-
-    # perform_transactions_eda(transactions_train_df)
