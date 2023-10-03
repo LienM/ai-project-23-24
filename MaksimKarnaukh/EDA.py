@@ -5,7 +5,7 @@ from datetime import datetime
 
 def load_dataset(file, data_types: dict = None):
     """
-    Loads a dataset
+    Loads a dataset.
     :param file: the file path of the dataset
     :param data_types: the data types of the columns in the dataset
     :return: the loaded dataset
@@ -28,7 +28,7 @@ def perform_basic_eda(df) -> None:
 
 def verify_ids(df, id_column: str, column_print_name: str, regex: str, check_unique: bool = True, column_type: str = "string") -> None:
     """
-    Verifies the ids/codes of a dataframe.
+    Verifies the ids/codes (in an id/code column) of a dataframe.
     :param df: the dataframe.
     :param id_column: the name of the column in the dataset containing the ids.
     :param column_print_name: the name of the column for printing purposes.
@@ -40,10 +40,10 @@ def verify_ids(df, id_column: str, column_print_name: str, regex: str, check_uni
 
     na_ids = df[id_column].isna().sum()
     # Are there any missing ids?
-    print(f"\t\tThere are {na_ids} missing {column_print_name}.")
-    # Check unique/no duplicate ids
+    print(f"There are {na_ids} missing {column_print_name}.")
+    # Check unique ids
     if check_unique:
-        print(f"\t\t{column_print_name} contain unique ids: {df[id_column].shape[0] == df[id_column].nunique()}")
+        print(f"{column_print_name} contain unique ids: {df[id_column].shape[0] == df[id_column].nunique()}")
     # Check if all ids have a length specified in the given regex
     if regex:
         id_matches = None
@@ -52,45 +52,16 @@ def verify_ids(df, id_column: str, column_print_name: str, regex: str, check_uni
         elif column_type == "numeric":
             id_matches = df[id_column].astype(str).str.fullmatch(regex)
         print(
-            f"\t\tAll {column_print_name} have the same format: {df[~id_matches].shape[0] == 0}")
+            f"All {column_print_name} have the same format: {df[~id_matches].shape[0] == 0}")
 
 
 # Verifying articles #
-
-def perform_articles_eda(articles) -> None:
-    """
-    Verifies the articles dataset.
-    :param articles: articles dataframe.
-    :return:
-    """
-
-    print("Verifying articles:")
-
-    print(f"\tTotal number of articles is {articles.shape[0]}.")
-
-    # check missing values of each column
-    print(f"\tMissing values per column:\n {articles.isna().sum()}")
-
-    verify_article_ids(articles)
-    verify_product_code(articles)
-    verify_prod_name(articles)
-    verify_product_type_no(articles)
-    verify_product_type_name(articles)
-    verify_colour_group_name(articles)
-    verify_graphical_appearance_name(articles)
-
-    check_correlation_between_columns_articles(articles)
-
-    print("\n")
-
 
 def verify_article_ids(articles) -> None:
     """
     Verifies the article id column in the articles' dataset.
     :param articles: the article ids in the articles dataset.
     """
-
-    print("\tVerifying article ids:")
 
     verify_ids(articles, "article_id", "article ids", '^[0-9]{10}$')
 
@@ -101,8 +72,6 @@ def verify_product_code(articles) -> None:
     :param articles: articles dataframe.
     """
 
-    print("\tVerifying product codes:")
-
     verify_ids(articles, "product_code", "product codes", '^[0-9]{7}$', False)
 
 def verify_prod_name(articles) -> None:
@@ -111,13 +80,11 @@ def verify_prod_name(articles) -> None:
     :param articles: articles dataframe.
     """
 
-    print("\tVerifying product name:")
-
     # check for amount of missing values
-    print(f"\t\tThere are {articles['prod_name'].isna().sum()} missing product names.")
+    print(f"There are {articles['prod_name'].isna().sum()} missing product names.")
 
     # check the (top) value counts of the product name
-    print(f"\t\tProduct name value counts:\n {articles['prod_name'].value_counts()}")
+    print(f"Product name value counts:\n{articles['prod_name'].value_counts()}")
 
 
 def verify_product_type_no(articles) -> None:
@@ -126,13 +93,11 @@ def verify_product_type_no(articles) -> None:
     :param articles: articles dataframe.
     """
 
-    print("\tVerifying product type number:")
-
     # check for amount of missing values
-    print(f"\t\tThere are {articles['product_type_no'].isna().sum()} missing product type numbers.")
+    print(f"There are {articles['product_type_no'].isna().sum()} missing product type numbers.")
 
     # check the (top) value counts of the product type number
-    print(f"\t\tProduct type number value counts:\n {articles['product_type_no'].value_counts()}")
+    print(f"Product type number value counts:\n{articles['product_type_no'].value_counts()}")
 
 
 def verify_product_type_name(articles) -> None:
@@ -141,16 +106,14 @@ def verify_product_type_name(articles) -> None:
     :param articles: articles dataframe.
     """
 
-    print("\tVerifying product type name:")
-
     # check for unique product type names
-    print(f"\t\tProduct type names are unique: {articles['product_type_name'].shape[0] == articles['product_type_name'].nunique()}")
+    print(f"Product type names are unique:{articles['product_type_name'].shape[0] == articles['product_type_name'].nunique()}")
 
     # check for amount of missing values
-    print(f"\t\tThere are {articles['product_type_name'].isna().sum()} missing product type names.")
+    print(f"There are {articles['product_type_name'].isna().sum()} missing product type names.")
 
     # check the (top) value counts of the product type name
-    print(f"\t\tProduct type name value counts:\n {articles['product_type_name'].value_counts()}")
+    print(f"Product type name value counts:\n{articles['product_type_name'].value_counts()}")
 
 
 def verify_graphical_appearance_name(articles) -> None:
@@ -159,13 +122,11 @@ def verify_graphical_appearance_name(articles) -> None:
     :param articles: articles dataframe.
     """
 
-    print("\tVerifying graphical appearance name:")
-
     # check for amount of missing values
-    print(f"\t\tThere are {articles['graphical_appearance_name'].isna().sum()} missing graphical appearance names.")
+    print(f"There are {articles['graphical_appearance_name'].isna().sum()} missing graphical appearance names.")
 
     # check the (top) value counts of the graphical appearance name
-    print(f"\t\tGraphical appearance name value counts:\n {articles['graphical_appearance_name'].value_counts()}")
+    print(f"Graphical appearance name value counts:\n{articles['graphical_appearance_name'].value_counts()}")
 
 
 def verify_colour_group_name(articles) -> None:
@@ -174,13 +135,11 @@ def verify_colour_group_name(articles) -> None:
     :param articles: articles dataframe.
     """
 
-    print("\tVerifying colour group name:")
-
     # check for amount of missing values
-    print(f"\t\tThere are {articles['colour_group_name'].isna().sum()} missing colour group names.")
+    print(f"There are {articles['colour_group_name'].isna().sum()} missing colour group names.")
 
     # check the (top) value counts of the colour group name
-    print(f"\t\tColour group name value counts:\n {articles['colour_group_name'].value_counts()}")
+    print(f"Colour group name value counts:\n{articles['colour_group_name'].value_counts()}")
 
 
 def check_correlation_between_columns_articles(articles) -> None:
