@@ -3,7 +3,8 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from datetime import datetime
 
-def load_dataset(file, data_types: dict = None):
+# General functions #
+def load_dataset(file: str, data_types: dict = None):
     """
     Loads a dataset.
     :param file: the file path of the dataset
@@ -116,6 +117,19 @@ def verify_graphical_appearance_name(articles) -> None:
     print(f"Graphical appearance name value counts:\n{articles['graphical_appearance_name'].value_counts()}")
 
 
+def verify_index_name(articles) -> None:
+    """
+    Verifies the index name in the articles' dataset.
+    :param articles: articles dataframe.
+    """
+
+    # check for amount of missing values
+    print(f"There are {articles['index_name'].isna().sum()} missing index names.")
+
+    # check the (top) value counts of the index name
+    print(f"Index name value counts:\n{articles['index_name'].value_counts()}")
+
+
 def verify_colour_group_name(articles) -> None:
     """
     Verifies the colour group name in the articles' dataset.
@@ -127,6 +141,33 @@ def verify_colour_group_name(articles) -> None:
 
     # check the (top) value counts of the colour group name
     print(f"Colour group name value counts:\n{articles['colour_group_name'].value_counts()}")
+
+
+def create_piechart_popular(df, column: str, n: int, dropna: bool = True) -> None:
+    """
+    Creates a pie chart of the most popular values in a column.
+    :param df: the dataframe to create the pie chart of.
+    :param column: the column to create the pie chart of.
+    :param n: how many of the most popular types to include in the pie chart.
+    :param dropna: whether to drop NaN values. Default: True.
+    :return:
+    """
+
+    # get the top n most common values
+    top_10 = df[column].value_counts(dropna=dropna).head(n)
+    # create a list of the top 10 most common values
+    top_10_list = list(top_10.index)
+    # create new empty dataframe
+    top_10 = pd.DataFrame()
+    # create a new column with the top 10 most common values and the rest falling under 'Other'
+    try:
+        top_10['top_10'] = df[column].apply(
+            lambda x: x if x in top_10_list else 'Other')
+        # create a pie chart of the product_type_name_top_10 column
+        top_10['top_10'].value_counts(dropna=dropna).plot.pie(figsize=(10, 10), autopct='%1.1f%%',
+                                                                            startangle=90)
+    except Exception as e:
+        print(f"Exception: {e}")
 
 
 # Verifying customers #
@@ -222,13 +263,13 @@ def verify_fashion_news_frequency(customers) -> None:
     """
 
     # Check and count all the different fashion news frequencies values
-    print(f"Fashion news frequencies value counts:\n{customers['fashion_news_frequency'].value_counts()}")
+    print(f"Fashion news frequencies value counts:\n{customers['fashion_news_frequency'].value_counts(dropna=False)}")
 
     # Percentage of missing fashion news frequency values
     print(f"Percentage of missing fashion news frequency values: {customers['fashion_news_frequency'].isna().sum()/customers.shape[0]*100}%")
 
 
-def create_grouped_barplot(df, original_ng_column, x, hue, dropna, graph_title, xlabel, ylabel, legend_title, percentages_to_mark: list = None) -> None:
+def create_grouped_barplot(df, original_ng_column: str, x: str, hue: str, dropna: bool, graph_title: str, xlabel: str, ylabel: str, legend_title: str, percentages_to_mark: list = None) -> None:
     """
     Creates a grouped barplot with age groups on the x-axis, per age group the percentage of customers that have the different hue statuses represented by the different colors. The y-axis is the percentage of customers per (age) group.
     :param df: dataframe with (age) groups included.
