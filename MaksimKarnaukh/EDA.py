@@ -12,19 +12,6 @@ def load_dataset(file, data_types: dict = None):
     """
     return pd.read_csv(file, dtype=data_types)
 
-def perform_basic_eda(df) -> None:
-    """
-    Performs a basic EDA on a dataset
-    :param df: the dataframe
-    :return:
-    """
-
-    # Get a summary of the dataset's structure
-    print(df.info())
-    # Summary statistics of numerical columns
-    print(df.describe())
-    # Number of missing values in each column
-    print(df.isna().sum())
 
 def verify_ids(df, id_column: str, column_print_name: str, regex: str, check_unique: bool = True, column_type: str = "string") -> None:
     """
@@ -51,8 +38,8 @@ def verify_ids(df, id_column: str, column_print_name: str, regex: str, check_uni
             id_matches = df[id_column].str.fullmatch(regex)
         elif column_type == "numeric":
             id_matches = df[id_column].astype(str).str.fullmatch(regex)
-        print(
-            f"All {column_print_name} have the same format: {df[~id_matches].shape[0] == 0}")
+            print(f"id_matches: {id_matches}")
+        print(f"All {column_print_name} have the same format: {df[~id_matches].shape[0] == 0}")
 
 
 # Verifying articles #
@@ -142,26 +129,6 @@ def verify_colour_group_name(articles) -> None:
     print(f"Colour group name value counts:\n{articles['colour_group_name'].value_counts()}")
 
 
-def check_correlation_between_columns_articles(articles) -> None:
-    """
-    Checks for correlation between the columns of the articles dataset.
-    :param articles: articles dataframe.
-    :return:
-    """
-
-    # Check if each product_code is uniquely mapped to a product_type_no
-    presumably_unique_pairs = articles.groupby(['product_code', 'product_type_no']).size().reset_index().rename(columns={0: 'count'}).sort_values(by='count', ascending=False)
-    print(f"Each product_code is uniquely mapped to a product_type_no: {presumably_unique_pairs['product_code'].shape[0] == presumably_unique_pairs['product_code'].nunique() & presumably_unique_pairs['product_type_no'].shape[0] == presumably_unique_pairs['product_type_no'].nunique()}")
-
-    # Check if each product_type_no is uniquely mapped to a product_type_name
-    presumably_unique_pairs = articles.groupby(['product_type_no', 'product_type_name']).size().reset_index().rename(columns={0: 'count'}).sort_values(by='count', ascending=False)
-    print(f"Each product_type_no is uniquely mapped to a product_type_name: {presumably_unique_pairs['product_type_no'].shape[0] == presumably_unique_pairs['product_type_no'].nunique() & presumably_unique_pairs['product_type_name'].shape[0] == presumably_unique_pairs['product_type_name'].nunique()}")
-
-    # find all non unique product_type_name values
-    non_unique_product_type_name = presumably_unique_pairs[presumably_unique_pairs.duplicated(subset=['product_type_name'], keep=False)]
-    print(f"Non unique product_type_name values:\n {non_unique_product_type_name}")
-
-
 # Verifying customers #
 
 def verify_customer_ids(customers) -> None:
@@ -227,7 +194,7 @@ def verify_active_status(customers) -> None:
     """
 
     # Check and count all the different active status values
-    print(f"Active status:\n{customers['Active'].value_counts(dropna=False)}")
+    print(f"Active status value counts:\n{customers['Active'].value_counts(dropna=False)}")
 
     # Percentage of missing active status values
     print(f"Percentage of missing Active values: {customers['Active'].isna().sum()/customers.shape[0]*100}%")
@@ -241,7 +208,7 @@ def verify_club_member_status(customers) -> None:
     """
 
     # Check and count all the different club member status values
-    print(f"Club member status:\n{customers['club_member_status'].value_counts(dropna=False)}")
+    print(f"Club member status value counts:\n{customers['club_member_status'].value_counts(dropna=False)}")
 
     # Percentage of missing club member status values
     print(f"Percentage of missing club member status values: {customers['club_member_status'].isna().sum()/customers.shape[0]*100}%")
@@ -255,27 +222,10 @@ def verify_fashion_news_frequency(customers) -> None:
     """
 
     # Check and count all the different fashion news frequencies values
-    print(f"Fashion news frequencies:\n{customers['fashion_news_frequency'].value_counts()}")
+    print(f"Fashion news frequencies value counts:\n{customers['fashion_news_frequency'].value_counts()}")
 
     # Percentage of missing fashion news frequency values
     print(f"Percentage of missing fashion news frequency values: {customers['fashion_news_frequency'].isna().sum()/customers.shape[0]*100}%")
-
-
-def check_correlation_between_columns_customers(customers) -> None:
-    """
-    Checks for correlation between the columns of the customers dataset.
-    :param customers: customers dataframe
-    :return:
-    """
-
-    # Check for correlation between fashion news frequency values and FN status but including rows with NaN values
-    print(f"Fashion news frequency and FN status correlation (including NaN values and sorted by count):\n {customers.groupby(['FN', 'fashion_news_frequency'], dropna=False).size().reset_index().rename(columns={0: 'count'}).sort_values(by='count', ascending=False)}")
-
-    # Check for correlation between FN and Active status values but including rows with NaN values
-    print(f"Fashion news frequency and FN status correlation (including NaN values and sorted by count):\n {customers.groupby(['FN', 'Active'], dropna=False).size().reset_index().rename(columns={0: 'count'}).sort_values(by='count', ascending=False)}")
-
-    # same but with columns FN, Active, club_member_status, and fashion_news_frequency
-    print(f"Fashion news frequency and FN status correlation (including NaN values and sorted by count):\n {customers.groupby(['FN', 'fashion_news_frequency', 'Active', 'club_member_status'], dropna=False).size().reset_index().rename(columns={0: 'count'}).sort_values(by='count', ascending=False)}")
 
 
 def create_grouped_barplot(df, original_ng_column, x, hue, dropna, graph_title, xlabel, ylabel, legend_title, percentages_to_mark: list = None) -> None:
@@ -334,7 +284,7 @@ def graphs_by_age_group(customers) -> None:
     """
 
     # create age groups
-    customers["age_group"] = pd.cut(customers["age"], bins=[0, 20, 30, 40, 50, 60, 70, 80, 90, 100, 120], labels=["0-20", "20-30", "30-40", "40-50", "50-60", "60-70", "70-80", "80-90", "90-100", ">100"])
+    customers["age_group"] = pd.cut(customers["age"], bins=[0, 20, 30, 40, 50, 60, 70, 80, 90, 100], labels=["0-20", "20-30", "30-40", "40-50", "50-60", "60-70", "70-80", "80-90", "90-100"])
 
     # create a barplot with age groups on the x-axis, per age group the percentage of customers that have the different FN statuses represented by the different colors. The y-axis is the percentage of customers per age group.
     create_grouped_barplot(customers, 'age', 'age_group', 'FN', False, 'Percentage Distribution of FN Status by Age Group', 'Age Group', 'Percentage (%)', 'FN Status', [10, 20, 30, 40, 50, 60, 70])
@@ -347,23 +297,6 @@ def graphs_by_age_group(customers) -> None:
 
 
 # Verifying transactions #
-
-def perform_transactions_eda(transactions) -> None:
-    """
-    Verifies the transactions dataset.
-    :param transactions: transactions dataframe
-    :return:
-    """
-
-    # Check for missing values
-    print(f"Missing values per column:\n{transactions.isna().sum()}")
-
-    verify_purchase_dates(transactions)
-    verify_transaction_customer_id(transactions)
-    verify_transaction_article_id(transactions)
-    verify_prices(transactions)
-    verify_sales_channel_ids(transactions)
-
 
 def verify_purchase_dates(transactions) -> None:
     """
@@ -413,10 +346,10 @@ def verify_prices(transactions) -> None:
     :param transactions: transactions dataframe
     """
 
-    verify_ids(transactions, "price", "prices", r'[0-9]+(\.[0-9]+)?', False, "numeric")
+    verify_ids(transactions, "price", "prices", r'[0-9]+(\.[0-9]+)?', False)
 
     # Check prices summary statistics (also only positive prices allowed)
-    print(f"{transactions['price'].describe().apply('{:.6f}'.format)}")
+    print(f"{transactions['price'].astype(float).describe().apply('{:.6f}'.format)}")
 
 
 def verify_sales_channel_ids(transactions) -> None:
@@ -430,4 +363,5 @@ def verify_sales_channel_ids(transactions) -> None:
 
     # Check all value counts
     print(f"Sales channel id value counts:\n {transactions['sales_channel_id'].value_counts()}")
+
 
