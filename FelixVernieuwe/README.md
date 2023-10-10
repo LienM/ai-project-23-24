@@ -6,8 +6,9 @@ Dataset is located in root folder of the repository, under `./data`
 Packages used:
 - **numpy:** (duh)
 - **pandas:** (duh²)
-- **dask:** parallel computing and dataset loading (factor 10 speedup for loading csv from disk)
+- ~~**dask:** parallel computing and dataset loading (factor 10 speedup for loading csv from disk)~~ (solved with Parquet)
 - **seaborn:** pretty & pretty effortless graphs
+- **tqdm:** proverbially watching the paint dry
 
 ## Assignment 1
 Went over each dataset and made some basic observations with regards to missing and odd values, as well as some basic statistics and 
