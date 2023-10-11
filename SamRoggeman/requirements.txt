@@ -1,2 +1,7 @@
 matplotlib
 pandas
+scikit-learn
+lightgbm
+pyarrow
+dask
+distributed
