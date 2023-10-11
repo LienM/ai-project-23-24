@@ -6,7 +6,7 @@ import pandas as pd
 
 class DataFileNames:
     """
-    Class containing the names of the data files and directories.
+    Static class containing the names of the data files and directories.
     """
     DATA_DIR = 'data'
     HNM_DIR = 'h-and-m-personalized-fashion-recommendations'
