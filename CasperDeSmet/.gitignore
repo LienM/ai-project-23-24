@@ -1,4 +1,6 @@
 data/
+warmup/
+submissions_feature_engineering/
 **/__pycache__/
 **/.DS_Store
 .vscode/

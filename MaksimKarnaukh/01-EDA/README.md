@@ -9,7 +9,7 @@ The dependencies are listed in the requirements.txt file. To install the depende
 pip install -r requirements.txt
 ```
 ## Usage
-The notebook is self-contained and can be run as is. The data is expected to be in the datasets directory, next to the notebook. The notebook is expected to be run in a Jupyter Notebook environment.
+The notebook is self-contained and can be run as is. The data is expected to be in the datasets directory. The notebook is expected to be run in a Jupyter Notebook environment.
 
 Note: The EDA.ipynb file uses a lot of functions from the EDA.py file. The EDA.py file is not meant to be run as a standalone file. It is meant to be imported into the EDA.ipynb file.
 
