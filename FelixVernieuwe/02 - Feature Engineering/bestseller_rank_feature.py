@@ -1,7 +1,7 @@
 import pandas as pd
 
 
-def bestseller_ranking(transactions: pd.DataFrame, customers: pd.DataFrame, articles: pd.DataFrame, reference_week):
+def bestseller_rank_feature(transactions: pd.DataFrame, customers: pd.DataFrame, articles: pd.DataFrame, reference_week):
     transactions = transactions[transactions['week'] > reference_week - 11]
 
     # Gets the weeks when the customers have bought a product
@@ -11,8 +11,8 @@ def bestseller_ranking(transactions: pd.DataFrame, customers: pd.DataFrame, arti
     customer_weekly_purchase_activity_shifted = {}
     for customer, weeks in customer_weekly_purchase_activity.items():
         customer_weekly_purchase_activity_shifted[customer] = {}
-        for week in customer_weekly_purchase_activity[customer]:
-            customer_weekly_purchase_activity_shifted[customer][week] = week + 1
+        for week in range(weeks.shape[0] - 1):
+            customer_weekly_purchase_activity_shifted[customer][weeks[week]] = weeks[week + 1]
         customer_weekly_purchase_activity_shifted[customer][weeks[-1]] = reference_week
 
     # Shift the transactions data
@@ -39,7 +39,8 @@ def bestseller_ranking(transactions: pd.DataFrame, customers: pd.DataFrame, arti
         columns=['article_id', 'price']).copy()
 
     # Drop all transactions where the customer has bought multiple products in the same week
-    transactions.drop_duplicates(subset=['week', 'customer_id']).copy()
+    # ISSUE: This is never assigned in the original code
+    transactions.drop_duplicates(['week', 'customer_id'])
 
     candidate_best_sellers = pd.merge(unique_transactions, most_sold_products_per_week_ranked, on='week')
 

@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 import os
-
+import hashlib
 
 def load_image(article_id):
     return mpimg.imread('../data/images/{}/{}.jpg'.format(article_id[:3], article_id))
@@ -100,3 +100,15 @@ def convert_parquet_to_csv(file_name):
     df = pd.read_parquet(file_name)
     df.to_csv(file_name.replace('.parquet', '.csv'), index=False)
     os.remove(file_name)
+
+
+def customer_hex_id_to_int(series):
+    return series.str[-16:].apply(hex_id_to_int)
+
+
+def hex_id_to_int(str):
+    return int(str[-16:], 16)
+
+
+def hash_dataframe(df):
+    return hashlib.sha256(df.head(100000).to_string().encode()).hexdigest()
