@@ -1,4 +1,5 @@
 from utils import get_data_path, load_data, DataFileNames, load_data_from_hnm
+from progress_bar import ProgressBar, ASCIIColour
 import multiprocessing as mp
 import time
 
@@ -90,13 +91,15 @@ def add_favourite_colour_feature(customers_: pd.DataFrame, articles_: pd.DataFra
     print('[ ] Adding favourite colour feature to customers dataframe...')
     new_customers_ = customers_.copy()
     new_customers_['favourite_colour'] = None
-    for customer_id in customers_['customer_id']:
-        purchases = get_purchases_for_customer(customer_id, transactions_)
-        if purchases.empty:
-            continue
-        favourite_colour = purchases['article_id'].apply(
-            lambda article_id: get_colour_group_name_for_article(article_id, articles_)).value_counts().index[0]
-        new_customers_.loc[new_customers_['customer_id'] == customer_id, 'favourite_colour'] = favourite_colour
+    customer_ids = customers_['customer_id'].unique()
+    with ProgressBar(customer_ids, ansi_colour=ASCIIColour.GREEN) as customer_ids_bar:
+        for customer_id in customer_ids_bar:
+            purchases = get_purchases_for_customer(customer_id, transactions_)
+            if purchases.empty:
+                continue
+            favourite_colour = purchases['article_id'].apply(
+                lambda article_id: get_colour_group_name_for_article(article_id, articles_)).value_counts().index[0]
+            new_customers_.loc[new_customers_['customer_id'] == customer_id, 'favourite_colour'] = favourite_colour
     print(f'[X] Added favourite colour feature to customers dataframe in {time.time() - start_time:.2f} seconds.')
     return new_customers_
 
@@ -113,13 +116,15 @@ def add_favourite_index_feature(customers_: pd.DataFrame, articles_: pd.DataFram
     print('[ ] Adding favourite index feature to customers dataframe...')
     new_customers_ = customers_.copy()
     new_customers_['favourite_index'] = None
-    for customer_id in customers_['customer_id']:
-        purchases = get_purchases_for_customer(customer_id, transactions_)
-        if purchases.empty:
-            continue
-        favourite_index = purchases['article_id'].apply(
-            lambda article_id: get_index_group_name_for_article(article_id, articles_)).value_counts().index[0]
-        new_customers_.loc[new_customers_['customer_id'] == customer_id, 'favourite_index'] = favourite_index
+    customer_ids = customers_['customer_id'].unique()
+    with ProgressBar(customer_ids, ansi_colour=ASCIIColour.GREEN) as customer_ids_bar:
+        for customer_id in customer_ids_bar:
+            purchases = get_purchases_for_customer(customer_id, transactions_)
+            if purchases.empty:
+                continue
+            favourite_index = purchases['article_id'].apply(
+                lambda article_id: get_index_group_name_for_article(article_id, articles_)).value_counts().index[0]
+            new_customers_.loc[new_customers_['customer_id'] == customer_id, 'favourite_index'] = favourite_index
     print(f'[X] Added favourite index feature to customers dataframe in {time.time() - start_time:.2f} seconds.')
     return new_customers_
 
