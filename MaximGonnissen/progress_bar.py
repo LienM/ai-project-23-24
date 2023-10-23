@@ -125,6 +125,9 @@ class ProgressBar:
             self.update()
             yield _
 
+    def __iter__(self):
+        return self.iterate()
+
 
 if __name__ == '__main__':
     class ExampleCollection:
@@ -140,7 +143,7 @@ if __name__ == '__main__':
 
 
     with ProgressBar(ExampleCollection(100)) as pb:
-        for i in pb.iterate():
+        for i in pb:
             with ProgressBar(ExampleCollection(30000), parent_progress_bar=pb) as pb2:
-                for j in pb2.iterate():
+                for j in pb2:
                     pass
