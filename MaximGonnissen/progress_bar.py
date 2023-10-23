@@ -27,7 +27,7 @@ class ProgressBar:
 
     def __init__(self, collection: Collection, bar_length: int = 20, show_count: bool = True,
                  clear_when_done: bool = True, full_bar: str = '█', half_bar: str = '▌', empty_bar: str = '░',
-                 bar_start: str = '[', bar_end: str = ']', progress_bar_colour: ASCIIColour = None,
+                 bar_start: str = '[', bar_end: str = ']', ansi_colour: str = None,
                  parent_progress_bar: 'ProgressBar' = None):
         """
         Create a new progress bar.
@@ -39,7 +39,7 @@ class ProgressBar:
         :param empty_bar: Character to use for an empty bar.
         :param bar_start: Character to use for the start of the bar.
         :param bar_end: Character to use for the end of the bar.
-        :param progress_bar_colour: Colour to use for the progress bar.
+        :param ansi_colour: Colour to use for the progress bar.
         :param parent_progress_bar: Parent progress bar to nest this progress bar in.
         """
         self.collection = collection
@@ -51,7 +51,7 @@ class ProgressBar:
         self.empty_bar = empty_bar
         self.bar_start = bar_start
         self.bar_end = bar_end
-        self.progress_bar_colour = progress_bar_colour
+        self.progress_bar_colour = ansi_colour
         self.parent_progress_bar = parent_progress_bar
 
         self.count = 0
