@@ -1,4 +1,4 @@
-from utils import get_data_path, load_data, DataFileNames
+from utils import get_data_path, load_data, DataFileNames, load_data_from_hnm
 import multiprocessing as mp
 import time
 
@@ -132,12 +132,10 @@ if __name__ == '__main__':
 
     data_path = get_data_path()
 
-    h_and_m_path = data_path / DataFileNames.HNM_DIR
-
-    articles = load_data(h_and_m_path / DataFileNames.ARTICLES)
-    customers = load_data(h_and_m_path / DataFileNames.CUSTOMERS)
-    sample_submission = load_data(h_and_m_path / DataFileNames.SAMPLE_SUBMISSION)
-    transactions_train = load_data(h_and_m_path / DataFileNames.TRANSACTIONS_TRAIN)
+    articles = load_data_from_hnm(DataFileNames.ARTICLES)
+    customers = load_data_from_hnm(DataFileNames.CUSTOMERS)
+    sample_submission = load_data_from_hnm(DataFileNames.SAMPLE_SUBMISSION)
+    transactions_train = load_data_from_hnm(DataFileNames.TRANSACTIONS_TRAIN)
 
     export_path = data_path / DataFileNames.OUTPUT_DIR / DataFileNames.FEATURE_ENGINEERING_DIR
 

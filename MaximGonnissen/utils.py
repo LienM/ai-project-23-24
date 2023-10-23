@@ -45,3 +45,13 @@ def load_data(path: pathlib.Path) -> pd.DataFrame:
     df = pd.read_csv(path)
     print(f'[X] Loaded data from {path} in {time.time() - time_start:.2f} seconds.')
     return df
+
+
+def load_data_from_hnm(path: pathlib.Path) -> pd.DataFrame:
+    """
+    Load data from a csv file in the h-and-m-personalized-fashion-recommendations folder,
+    measuring the time it takes to load.
+    :param path: Path to the csv file.
+    :return: Dataframe containing the data from the csv file.
+    """
+    return load_data(get_data_path() / DataFileNames.HNM_DIR / path)
