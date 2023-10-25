@@ -147,8 +147,8 @@ class ProgressBar:
         """
         self.count = 0
         for _ in self.collection:
-            self.count += 1
             self.update()
+            self.count += 1
             yield _
 
     def __iter__(self):
