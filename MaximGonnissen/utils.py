@@ -1,7 +1,16 @@
 import pathlib
 import time
+from datetime import datetime
 
 import pandas as pd
+
+
+class ProjectConfig:
+    """
+    Static class to hold important variables
+    """
+    DATA_START = datetime.fromisoformat("2018-09-20")
+    DATA_END = datetime.fromisoformat("2020-09-22")
 
 
 class DataFileNames:
