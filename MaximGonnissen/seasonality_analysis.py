@@ -76,7 +76,7 @@ def calculate_season_scores(df: pd.DataFrame) -> pd.DataFrame:
     :return: DataFrame containing seasonal sales numbers for each article.
     """
     start_time = time.time()
-    print('[ ] Calculating seasonal sales numbers for each article...')
+    print('[ ] Calculating seasonal scores for each article...')
 
     new_df = df.copy()
     new_df['t_dat'] = pd.to_datetime(new_df['t_dat'])
@@ -90,7 +90,7 @@ def calculate_season_scores(df: pd.DataFrame) -> pd.DataFrame:
     new_df = new_df.groupby(['article_id']).sum().reset_index()
     new_df = new_df.drop(columns=['count'])
 
-    print(f'[X] Calculated seasonal sales numbers for each article in {time.time() - start_time:.2f} seconds.')
+    print(f'[X] Calculated seasonal scores for each article in {time.time() - start_time:.2f} seconds.')
     return new_df
 
 
