@@ -141,38 +141,57 @@ if __name__ == '__main__':
     mp_pool_count = max(mp.cpu_count() - 1, 1)
     print(f'Using {mp_pool_count} cores for multiprocessing.')
 
+    # Output paths
     seasonal_scores_path = get_data_path() / DataFileNames.OUTPUT_DIR / 'seasonal_scores.csv'
+    article_sales_per_date_path = get_data_path() / DataFileNames.OUTPUT_DIR / 'article_sales_per_date.csv'
+    seasonal_sales_path = get_data_path() / DataFileNames.OUTPUT_DIR / 'seasonal_sales.csv'
+    top_seasonal_sales_path = get_data_path() / DataFileNames.OUTPUT_DIR / 'top_seasonal_sales.csv'
 
-    if not seasonal_scores_path.exists():
-        # Load data
+    # Overrides
+    Season.max_score_offset = 30
+    Season.max_score_day_range = 30
+    do_rerun_seasonal_scores = True
+
+    article_sales_per_date_df = None
+    if not article_sales_per_date_path.exists():
         transactions_train = load_data_from_hnm(DataFileNames.TRANSACTIONS_TRAIN, dtype={'article_id': str})
 
         # Calculate sales per date for each article
         article_sales_per_date_df = article_sales_per_date(transactions_train)
 
-        output_path = get_data_path() / DataFileNames.OUTPUT_DIR / 'article_sales_per_date.csv'
-        article_sales_per_date_df.to_csv(output_path, index=False)
+        article_sales_per_date_df.to_csv(article_sales_per_date_path, index=False)
+    else:
+        article_sales_per_date_df = load_data(article_sales_per_date_path, dtype={'article_id': str})
 
+    seasonal_sales_df = None
+    if not seasonal_sales_path.exists():
         # Calculate seasonal sales numbers for each article
         seasonal_sales_df = calculate_seasonal_sales(article_sales_per_date_df)
 
-        output_path = get_data_path() / DataFileNames.OUTPUT_DIR / 'seasonal_sales.csv'
-        seasonal_sales_df.to_csv(output_path, index=False)
+        seasonal_sales_df.to_csv(seasonal_sales_path, index=False)
+    else:
+        seasonal_sales_df = load_data(seasonal_sales_path, dtype={'article_id': str})
 
+    seasonal_scores_df = None
+    if not seasonal_scores_path.exists() or do_rerun_seasonal_scores:
         # Calculate seasonal scores for each article
         seasonal_scores_df = calculate_season_scores(article_sales_per_date_df)
 
-        output_path = seasonal_scores_path
-        seasonal_scores_df.to_csv(output_path, index=False)
+        seasonal_scores_df.to_csv(seasonal_scores_path, index=False)
+    else:
+        seasonal_scores_df = load_data(seasonal_scores_path, dtype={'article_id': str})
 
-    seasonal_scores_df = load_data(seasonal_scores_path, dtype={'article_id': str})
+    top_seasonal_sales_df = None
+    if not top_seasonal_sales_path.exists() or do_rerun_seasonal_scores:
+        # Calculate top seasonal sales
+        top_seasonal_sales_df = calculate_top_sales(seasonal_scores_df, ProjectConfig.DATA_END,
+                                                    ProjectConfig.DATA_END + datetime.timedelta(days=7))
 
-    top_seasonal_sales = calculate_top_sales(seasonal_scores_df, ProjectConfig.DATA_START, ProjectConfig.DATA_START + datetime.timedelta(days=7))
+        top_seasonal_sales_df.to_csv(top_seasonal_sales_path, index=False)
+    else:
+        top_seasonal_sales_df = load_data(top_seasonal_sales_path, dtype={'article_id': str})
 
-    output_path = get_data_path() / DataFileNames.OUTPUT_DIR / 'top_seasonal_sales.csv'
-    top_seasonal_sales.to_csv(output_path, index=False)
-
-    top_items = predict_top_items(top_seasonal_sales)
+    top_items = predict_top_items(top_seasonal_sales_df)
     top_items_string = ' '.join([str(item_id) for item_id in top_items])
 
     submission_df = load_data_from_hnm(DataFileNames.SAMPLE_SUBMISSION)
