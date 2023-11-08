@@ -1,2 +1,11 @@
 matplotlib
 pandas
+scikit-learn
+lightgbm
+pyarrow
+dask
+distributed
+torch
+tqdm
+keras
+keras-tuner
