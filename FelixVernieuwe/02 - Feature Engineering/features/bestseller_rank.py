@@ -1,9 +1,8 @@
 import pandas as pd
 
 
-def bestseller_rank_feature(transactions: pd.DataFrame, customers: pd.DataFrame, articles: pd.DataFrame, reference_week):
-    transactions = transactions[transactions['week'] > reference_week - 11]
-
+def bestseller_rank_feature(transactions: pd.DataFrame, reference_week):
+    """Determines how high on the bestseller list a product was when it was bought."""
     # Gets the weeks when the customers have bought a product
     customer_weekly_purchase_activity = transactions.groupby('customer_id')['week'].unique()
 
@@ -39,33 +38,41 @@ def bestseller_rank_feature(transactions: pd.DataFrame, customers: pd.DataFrame,
         columns=['article_id', 'price']).copy()
 
     # Drop all transactions where the customer has bought multiple products in the same week
-    # ISSUE: This is never assigned in the original code
-    transactions.drop_duplicates(['week', 'customer_id'])
+    # ISSUE: This is never assigned in the original code (now commented)
+    # transactions.drop_duplicates(['week', 'customer_id'])
 
+    # Gets the candidate bestsellers for the reference week
     candidate_best_sellers = pd.merge(unique_transactions, most_sold_products_per_week_ranked, on='week')
 
+    # Gets the transactions for the reference week
     reference_week_transactions = unique_transactions.drop_duplicates(subset=['customer_id']).reset_index(drop=True)
     reference_week_transactions['week'] = reference_week
 
-    candidate_best_sellers_reference_week = pd.merge(reference_week_transactions, most_sold_products_per_week_ranked,
-                                                     on='week')
+    # Gets the candidate bestsellers for the reference week
+    candidate_best_sellers_reference_week = pd.merge(reference_week_transactions, most_sold_products_per_week_ranked, on='week')
 
+    # Gets all the candidate bestsellers
     all_candidate_best_sellers = pd.concat([candidate_best_sellers, candidate_best_sellers_reference_week])
     all_candidate_best_sellers.drop(columns=['bestseller_rank'], inplace=True)
 
-    transactions['bought'] = 1
+    # Mark all current transactions as bought
+    output = transactions.copy()
+    output['bought'] = 1
 
-    transactions = pd.concat([transactions, data_shifted, all_candidate_best_sellers])
-    transactions.fillna(0, inplace=True)
+    # Add all candidates as negative examples of data
+    output = pd.concat([output, data_shifted, all_candidate_best_sellers])
+    output.fillna(0, inplace=True)
 
-    transactions.drop_duplicates(['customer_id', 'article_id', 'week'], inplace=True)
-    transactions = pd.merge(transactions, most_sold_products_per_week_ranked[['week', 'article_id', 'bestseller_rank']],
+    # Remove accidental duplicates and merge with most sold products per week (to get the bestseller rank)
+    output.drop_duplicates(['customer_id', 'article_id', 'week'], inplace=True)
+    output = pd.merge(output, most_sold_products_per_week_ranked[['week', 'article_id', 'bestseller_rank']],
                             on=['week', 'article_id'], how='left')
 
     # Remove the oldest data
-    first_week = transactions['week'].min()
-    transactions = transactions[transactions['week'] != first_week]
+    first_week = output['week'].min()
+    output = output[output['week'] != first_week]
 
-    transactions['bestseller_rank'].fillna(999, inplace=True)
+    # Fill in all missing bestseller ranks with 999
+    output['bestseller_rank'].fillna(999, inplace=True)
 
-    return transactions, customers, articles
+    return output
