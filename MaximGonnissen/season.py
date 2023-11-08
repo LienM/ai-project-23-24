@@ -126,7 +126,10 @@ class Season:
         if isinstance(end_doy, int):
             end_doy = CalendarDay(end_doy)
         self.end_doy = end_doy
-        self.max_score_day = self.start_doy + self.max_score_offset
+
+    @property
+    def max_score_day(self):
+        return self.start_doy + self.max_score_offset
 
     def __str__(self):
         return self.season_name
@@ -173,7 +176,8 @@ class Season:
         date_doy = date.dayofyear
         calendar_day = CalendarDay(date_doy)
         distance_from = calendar_day.distance_from(self.max_score_day)
-        return max(0, self.max_score_day_range - distance_from)
+        score = max(0, self.max_score_day_range - distance_from)
+        return score
 
 
 seasons = [
