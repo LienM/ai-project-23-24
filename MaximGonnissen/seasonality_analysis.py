@@ -94,7 +94,8 @@ def calculate_season_scores(df: pd.DataFrame) -> pd.DataFrame:
     return new_df
 
 
-def calculate_top_sales(df: pd.DataFrame, start_date: datetime.datetime, end_date: datetime.datetime, top_x: int = 12) -> pd.DataFrame:
+def calculate_top_sales(df: pd.DataFrame, start_date: datetime.datetime, end_date: datetime.datetime,
+                        top_x: int = 12) -> pd.DataFrame:
     """
     Calculate best-selling seasonal items
     :param df: Dataframe with season scores per item
@@ -109,7 +110,8 @@ def calculate_top_sales(df: pd.DataFrame, start_date: datetime.datetime, end_dat
     for day in pd.date_range(start_date, end_date):
         season = get_season(day)
         top_x_items = df.sort_values(by=season.season_name, ascending=False).head(top_x)['article_id'].tolist()
-        out_df = out_df._append({'date': day, 'items': ' '.join([str(item_id) for item_id in top_x_items])}, ignore_index=True)
+        out_df = out_df._append({'date': day, 'items': ' '.join([str(item_id) for item_id in top_x_items])},
+                                ignore_index=True)
 
     return out_df
 
