@@ -27,6 +27,10 @@ def evaluate():
 
 @logger.catch
 def main():
+    create_image_embeddings("data/images.nosync", "data/embeddings/image_embeddings.parquet")
+    create_text_embeddings("data/article.csv", "data/embeddings/text_embeddings_plain.parquet", template="plain")
+    concatenate_embeddings("data/embeddings/text_embeddings_plain.parquet", "data/embeddings/image_embeddings.parquet", "data/embeddings/concatenated_embeddings.parquet")
+
     rank()
     # evaluate()
 
