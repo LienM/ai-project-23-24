@@ -148,7 +148,7 @@ if __name__ == '__main__':
     top_seasonal_sales_path = get_data_path() / DataFileNames.OUTPUT_DIR / 'top_seasonal_sales.csv'
 
     # Overrides
-    Season.max_score_offset = 30
+    Season.max_score_offset = -30
     Season.max_score_day_range = 30
     do_rerun_seasonal_scores = True
 
