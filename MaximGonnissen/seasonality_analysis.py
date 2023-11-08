@@ -152,6 +152,9 @@ if __name__ == '__main__':
     Season.max_score_day_range = 30
     do_rerun_seasonal_scores = True
 
+    print(f"Script started at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.")
+    print(f"Using season parameters: max_score_offset={Season.max_score_offset}, max_score_day_range={Season.max_score_day_range}.")
+
     article_sales_per_date_df = None
     if not article_sales_per_date_path.exists():
         transactions_train = load_data_from_hnm(DataFileNames.TRANSACTIONS_TRAIN, dtype={'article_id': str})
