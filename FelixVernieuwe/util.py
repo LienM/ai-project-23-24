@@ -4,6 +4,8 @@ import seaborn as sns
 import pandas as pd
 import os
 import hashlib
+import kaggle
+
 
 def load_image(article_id):
     return mpimg.imread('../data/images/{}/{}.jpg'.format(article_id[:3], article_id))
@@ -110,5 +112,78 @@ def hex_id_to_int(str):
     return int(str[-16:], 16)
 
 
-def hash_dataframe(df):
-    return hashlib.sha256(df.head(100000).to_string().encode()).hexdigest()
+
+
+def hash_dataframe(df, n=100000):
+    """Encodes the first n rows of a dataframe as a string and returns the sha256 hash of that string."""
+    return hashlib.sha256(df.head(n).to_string().encode()).hexdigest()
+
+
+def compare_dataframes(df1, df2, n=100000):
+    """Compares the first n rows of two dataframes and returns True if they are equal.
+
+    NOTE: useful for quickly checking if two dataframes are *probably* the same
+    """
+    return hash_dataframe(df1, n) == hash_dataframe(df2, n)
+
+
+def split_dataframe(df, condition):
+    """
+    Splits a dataframe into two dataframes based on condition.
+    :returns: (df[condition], df[~condition])
+    """
+    return df[condition], df[~condition]
+
+
+def initialise_kaggle(kaggle_json_path):
+    """Initialises the Kaggle API."""
+
+    os.environ['KAGGLE_CONFIG_DIR'] = kaggle_json_path
+    kaggle.api.authenticate()
+
+
+def upload_to_kaggle(filepath, message):
+    """Uploads a submission to Kaggle."""
+
+    return kaggle.api.competition_submit(filepath, message, 'h-and-m-personalized-fashion-recommendations')
+
+
+def generate_submission_df(submission_df, predictions):
+    """Generates a submission dataframe that combines a submission dataframe with predictions for each customer."""
+
+    prediction_dict = predictions.groupby("customer_id")["article_id"].apply(list).to_dict()
+    output_df = submission_df.copy()
+    output_df.prediction = [" ".join(f"0{x}" for x in prediction_dict[customer_id]) for customer_id in customer_hex_id_to_int(output_df["customer_id"])]
+    return output_df
+
+
+def feature_importance_df(ranker, available_features):
+    """Converts the LGBM's ranking of feature importance to percentual notation"""
+    # Percentual importance of each feature
+    feature_importance = pd.DataFrame(
+        {
+            "feature": available_features,
+            "importance": ranker.feature_importances_,
+        }
+    ).sort_values("importance", ascending=False)
+
+    feature_importance["importance"] = feature_importance["importance"] / feature_importance["importance"].sum() * 100
+    feature_importance["feature"] = feature_importance["feature"].map(lambda x: x.replace("_", " ").title())
+
+    return feature_importance
+
+
+def graph_feature_importance(feature_importance):
+    """Creates a graph displaying the LGBM's ranking of feature importance."""
+
+    feature_importance = feature_importance[feature_importance["importance"] > 0]
+
+    plot = sns.barplot(x="importance", y="feature", data=feature_importance)
+    plot.set_xlabel("Importance")
+    plot.set_ylabel("Feature")
+
+    plot.set_xscale("log")
+    plot.set_xticklabels(["{:.1f}%".format(x) for x in plot.get_xticks()])
+    plot.set_title("Feature Importance")
+
+    return plot

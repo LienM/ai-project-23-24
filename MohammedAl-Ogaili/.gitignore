@@ -1,1 +1,5 @@
 data/
+*.pt
+*.gz
+*.zip
+*.bin
