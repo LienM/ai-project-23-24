@@ -51,7 +51,7 @@ def load_data(path: pathlib.Path, **kwargs) -> pd.DataFrame:
     """
     time_start = time.time()
     print(f'[ ] Loading data from {path}...')
-    df = pd.read_csv(path, engine='pyarrow', **kwargs)
+    df = pd.read_csv(path, **kwargs)
     print(f'[X] Loaded data from {path} in {time.time() - time_start:.2f} seconds.')
     return df
 
