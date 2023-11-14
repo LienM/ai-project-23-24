@@ -4,6 +4,28 @@
 
 
 import numpy as np
+import pandas as pd
+
+
+def recall_at_k(df, k):
+    """
+    Calculate the average Recall@K from a DataFrame using vectorized operations.
+
+    Parameters:
+    df (DataFrame): A DataFrame with columns 'customer_id', 'actual_bought', and 'candidates'.
+    k (int): The number of top recommendations to consider for each user.
+
+    Returns:
+    float: The average Recall@K across all users.
+    """
+    def calculate_recall(row):
+        top_k_items = set(row['candidates'][:k])
+        actual_items = set(row['actual_bought'])
+        hits = len(top_k_items.intersection(actual_items))
+        return hits / len(actual_items) if actual_items else 0
+
+    recall_scores = df.apply(calculate_recall, axis=1)
+    return recall_scores.mean()
 
 
 def precision_at_k(y_true, y_pred, k=12):
