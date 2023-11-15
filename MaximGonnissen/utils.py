@@ -1,7 +1,16 @@
 import pathlib
 import time
+from datetime import datetime
 
 import pandas as pd
+
+
+class ProjectConfig:
+    """
+    Static class to hold important variables
+    """
+    DATA_START = datetime.fromisoformat("2018-09-20")
+    DATA_END = datetime.fromisoformat("2020-09-22")
 
 
 class DataFileNames:
@@ -34,7 +43,7 @@ def get_data_path() -> pathlib.Path:
     return data_path
 
 
-def load_data(path: pathlib.Path) -> pd.DataFrame:
+def load_data(path: pathlib.Path, **kwargs) -> pd.DataFrame:
     """
     Load data from a csv file, measuring the time it takes to load.
     :param path: Path to the csv file.
@@ -42,16 +51,16 @@ def load_data(path: pathlib.Path) -> pd.DataFrame:
     """
     time_start = time.time()
     print(f'[ ] Loading data from {path}...')
-    df = pd.read_csv(path, engine='pyarrow')
+    df = pd.read_csv(path, **kwargs)
     print(f'[X] Loaded data from {path} in {time.time() - time_start:.2f} seconds.')
     return df
 
 
-def load_data_from_hnm(path: pathlib.Path) -> pd.DataFrame:
+def load_data_from_hnm(path: pathlib.Path, **kwargs) -> pd.DataFrame:
     """
     Load data from a csv file in the h-and-m-personalized-fashion-recommendations folder,
     measuring the time it takes to load.
     :param path: Path to the csv file.
     :return: Dataframe containing the data from the csv file.
     """
-    return load_data(get_data_path() / DataFileNames.HNM_DIR / path)
+    return load_data(get_data_path() / DataFileNames.HNM_DIR / path, **kwargs)

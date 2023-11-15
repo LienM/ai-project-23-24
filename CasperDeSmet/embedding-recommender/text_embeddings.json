@@ -1,0 +1,25 @@
+{
+    "columns":
+    [
+        "prod_name",
+        "product_type_name",
+        "product_group_name",
+        "graphical_appearance_name",
+        "colour_group_name",
+        "perceived_colour_value_name",
+        "perceived_colour_master_name",
+        "department_name",
+        "index_name",
+        "index_group_name",
+        "section_name",
+        "garment_group_name",
+        "detail_desc"
+    ],
+    "templates":
+    {
+        "plain":
+        "{prod_name}, {product_type_name}, {product_group_name}, {graphical_appearance_name}, {colour_group_name}, {perceived_colour_value_name}, {perceived_colour_master_name}, {department_name}, {index_name}, {index_group_name}, {section_name}, {garment_group_name}, {detail_desc}",
+        "descriptive": "Product: {prod_name}. Product type: {product_type_name}. Product group: {product_group_name}. Graphical appearance: {graphical_appearance_name}. Colour group: {colour_group_name}. Perceived colour value: {perceived_colour_value_name}. Perceived colour master: {perceived_colour_master_name}. Department: {department_name}. Index: {index_name}. Index group: {index_group_name}. Section: {section_name}. Garment group: {garment_group_name}. Detailed description: {detail_desc}.",
+        "elaborative": "The {prod_name} is a {product_type_name} and is in the {product_group_name} group. It has a {graphical_appearance_name} appearance. The product is {colour_group_name}, more specifically {perceived_colour_value_name} {perceived_colour_master_name}. You can find it in department {department_name}, section {section_name} under garment group {garment_group_name}. Finally, look in the index at {index_group_name}/{index_name}. For a more detailed description: '{detail_desc}'."
+    }
+}
