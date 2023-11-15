@@ -19,8 +19,8 @@ def recall_at_k(df, k):
     float: The average Recall@K across all users.
     """
     def calculate_recall(row):
-        top_k_items = set(row['candidates'][:k])
-        actual_items = set(row['actual_bought'])
+        top_k_items = set(row['y_pred'][:k])
+        actual_items = set(row['y_true'])
         hits = len(top_k_items.intersection(actual_items))
         return hits / len(actual_items) if actual_items else 0
 
