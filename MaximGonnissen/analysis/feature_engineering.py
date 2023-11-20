@@ -1,4 +1,4 @@
-from utils import get_data_path, DataFileNames, load_data_from_hnm
+from utils.utils import get_data_path, DataFileNames, load_data_from_hnm
 from utils.progress_bar import ProgressBar, ASCIIColour
 import multiprocessing as mp
 import time

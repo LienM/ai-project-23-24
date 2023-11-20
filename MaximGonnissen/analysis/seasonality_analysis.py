@@ -3,7 +3,7 @@ import time
 import multiprocessing as mp
 
 from utils.season import Season, seasons
-from utils import DataFileNames, load_data_from_hnm, get_data_path, load_data, ProjectConfig
+from utils.utils import DataFileNames, load_data_from_hnm, get_data_path, load_data, ProjectConfig
 from utils.progress_bar import ProgressBar
 
 import pandas as pd

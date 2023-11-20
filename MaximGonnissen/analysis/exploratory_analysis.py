@@ -7,7 +7,7 @@ import pandas as pd
 import seaborn as sns
 from PIL import Image
 
-from utils import load_data, get_data_path, DataFileNames
+from utils.utils import load_data, get_data_path, DataFileNames
 
 
 # Describe data
