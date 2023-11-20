@@ -2,9 +2,9 @@ import datetime
 import time
 import multiprocessing as mp
 
-from season import Season, seasons
+from utils.season import Season, seasons
 from utils import DataFileNames, load_data_from_hnm, get_data_path, load_data, ProjectConfig
-from progress_bar import ProgressBar
+from utils.progress_bar import ProgressBar
 
 import pandas as pd
 

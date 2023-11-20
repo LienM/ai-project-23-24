@@ -18,13 +18,13 @@ class DataFileNames:
     Static class containing the names of the data files and directories.
     """
     DATA_DIR = 'data'
-    HNM_DIR = 'h-and-m-personalized-fashion-recommendations'
+    HNM_DIR = '../../data/h-and-m-personalized-fashion-recommendations'
     ARTICLES = 'articles.csv'
     CUSTOMERS = 'customers.csv'
     SAMPLE_SUBMISSION = 'sample_submission.csv'
     TRANSACTIONS_TRAIN = 'transactions_train.csv'
     IMAGES_DIR = 'images'
-    OUTPUT_DIR = 'output'
+    OUTPUT_DIR = '../../data/output'
     PLOTS_DIR = 'plots'
     FEATURE_ENGINEERING_DIR = 'feature_engineering'
 
