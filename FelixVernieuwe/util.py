@@ -153,7 +153,7 @@ def generate_submission_df(submission_df, predictions):
 
     prediction_dict = predictions.groupby("customer_id")["article_id"].apply(list).to_dict()
     output_df = submission_df.copy()
-    output_df.prediction = [" ".join(f"0{x}" for x in prediction_dict[customer_id]) for customer_id in customer_hex_id_to_int(output_df["customer_id"])]
+    output_df.prediction = [" ".join(f"0{x}" for x in prediction_dict[customer_id]) for customer_id in customer_hex_id_to_int(submission_df["customer_id"]) if customer_id in prediction_dict]
     return output_df
 
 
