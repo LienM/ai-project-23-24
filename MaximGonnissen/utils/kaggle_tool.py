@@ -58,7 +58,6 @@ class KaggleTool:
         self.api = kaggle.api
         self.competition = competition
 
-        self.api.authenticate()
         if not self.is_authenticated:
             self.api.authenticate()
 
