@@ -43,24 +43,26 @@ def get_data_path() -> pathlib.Path:
     return data_path
 
 
-def load_data(path: pathlib.Path, **kwargs) -> pd.DataFrame:
+def load_data(path: pathlib.Path, verbose: bool = True, **kwargs) -> pd.DataFrame:
     """
     Load data from a csv file, measuring the time it takes to load.
     :param path: Path to the csv file.
     :return: Dataframe containing the data from the csv file.
     """
     time_start = time.time()
-    print(f'[ ] Loading data from {path}...')
+    if verbose:
+        print(f'[ ] Loading data from {path}...')
     df = pd.read_csv(path, **kwargs)
-    print(f'[X] Loaded data from {path} in {time.time() - time_start:.2f} seconds.')
+    if verbose:
+        print(f'[X] Loaded data from {path} in {time.time() - time_start:.2f} seconds.')
     return df
 
 
-def load_data_from_hnm(path: pathlib.Path, **kwargs) -> pd.DataFrame:
+def load_data_from_hnm(path: pathlib.Path, verbose: bool = True, **kwargs) -> pd.DataFrame:
     """
     Load data from a csv file in the h-and-m-personalized-fashion-recommendations folder,
     measuring the time it takes to load.
     :param path: Path to the csv file.
     :return: Dataframe containing the data from the csv file.
     """
-    return load_data(get_data_path() / DataFileNames.HNM_DIR / path, **kwargs)
+    return load_data(get_data_path() / DataFileNames.HNM_DIR / path, verbose, **kwargs)
