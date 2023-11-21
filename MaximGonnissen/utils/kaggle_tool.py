@@ -61,6 +61,19 @@ class KaggleTool:
         if not self.is_authenticated:
             self.api.authenticate()
 
+    def get_all_submissions(self, competition: str = None):
+        submissions = []
+        results = []
+        page = 0
+        while results not in [[], None]:
+            results = self.api.process_response(self.api.competitions_submissions_list(id=competition, page=page))
+            submissions.extend([Submission(s) for s in results])
+
+            print(f'Page {page}: {len(results)} submissions')
+
+            page += 1
+
+        return submissions
 
     def list_submissions(self, competition: str = None):
         return self.api.competition_submissions(competition or self.competition)
