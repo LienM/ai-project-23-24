@@ -10,6 +10,10 @@ import json
 def already_ran_for(score_offset: int, day_range: int, kaggle_tool: KaggleTool):
     submissions = kaggle_tool.list_submissions_wrapped()
 
+    print([submission.get_filename() for submission in submissions])
+
+    exit()
+
     # Check if submission with same parameters already exists
     for submission in submissions:
         try:
@@ -22,43 +26,67 @@ def already_ran_for(score_offset: int, day_range: int, kaggle_tool: KaggleTool):
     return False
 
 
-def run_seasonal_analysis_bulk(kaggle_tool: KaggleTool):
+def get_combinations():
     max_score_offset_range = range(-60, 10, 1)
     max_score_day_range_range = range(7, 30, 1)
-    suffix = 0
 
-    for max_score_offset in max_score_offset_range:
-        for max_score_day_range in max_score_day_range_range:
-            if already_ran_for(max_score_offset, max_score_day_range, kaggle_tool):
-                print(
-                    f'> Already ran analysis for max_score_offset={max_score_offset} and max_score_day_range={max_score_day_range}.')
-                continue
+    combinations = [(max_score_offset, max_score_day_range) for max_score_offset in max_score_offset_range for max_score_day_range in max_score_day_range_range]
+    return combinations
 
-            print(
-                f'> Running analysis for max_score_offset={max_score_offset} and max_score_day_range={max_score_day_range}.')
-            start_time = time.time()
-            output_bytes = run_seasonal_analysis(max_score_offset, max_score_day_range, True, verbose=False, to_csv=False, submission_suffix=f"{suffix}")
-            suffix += 1
-            print(
-                f'> Finished analysis for max_score_offset={max_score_offset} and max_score_day_range={max_score_day_range} in {time.time() - start_time} seconds.')
 
-            print(f'> Zipping output')
-            zip_path = get_data_path() / DataFileNames.OUTPUT_DIR / f'seasonal_analysis_{max_score_offset}_{max_score_day_range}.zip'
-            with zipfile.ZipFile(zip_path, 'w') as zip_file:
-                zip_file.writestr('seasonal_analysis.csv', output_bytes.getvalue())
+def _run_seasonal_analysis(max_score_offset: int, max_score_day_range: int):
+    kaggle_tool = KaggleTool('h-and-m-personalized-fashion-recommendations')
 
-            print(f'> Uploading output to Kaggle')
-            metadata = {'max_score_offset': max_score_offset, 'max_score_day_range': max_score_day_range, }
-            kaggle_tool.upload_submission(zip_path, metadata=metadata)
+    if already_ran_for(max_score_offset, max_score_day_range, kaggle_tool):
+        print(
+            f'> Already ran analysis for max_score_offset={max_score_offset} and max_score_day_range={max_score_day_range}.')
+        return
 
-            return
+    print(
+        f'> Running analysis for max_score_offset={max_score_offset} and max_score_day_range={max_score_day_range}.')
+
+    start_time = time.time()
+    output_bytes = run_seasonal_analysis(max_score_offset, max_score_day_range, True, verbose=False, to_csv=False)
+
+    print(
+        f'> Finished analysis for max_score_offset={max_score_offset} and max_score_day_range={max_score_day_range} in {time.time() - start_time} seconds.')
+
+    print(f'> Zipping output')
+    zip_path = get_data_path() / DataFileNames.OUTPUT_DIR / DataFileNames.ZIP_DIR / f'seasonal_analysis_{max_score_offset}_{max_score_day_range}.zip'
+
+    if not zip_path.parent.exists():
+        zip_path.parent.mkdir(parents=True)
+
+    with zipfile.ZipFile(zip_path, 'w') as zip_file:
+        zip_file.writestr('seasonal_analysis.csv', output_bytes.getvalue())
+
+    print(f'> Uploading output to Kaggle')
+    metadata = {'max_score_offset': max_score_offset, 'max_score_day_range': max_score_day_range, }
+    kaggle_tool.upload_submission(zip_path, metadata=metadata)
+
+    return
+
+
+def run_seasonal_analysis_parallel(_mp_pool_count: int):
+    """
+    Runs seasonal analysis for a range of parameters and uploads the results to Kaggle.
+    Processing is done in parallel using multiprocessing.
+    :param _mp_pool_count: Number of processes to use for multiprocessing
+    """
+    with mp.Pool(_mp_pool_count) as pool:
+        pool.starmap(_run_seasonal_analysis, get_combinations())
 
 
 if __name__ == '__main__':
     script_start_time = time.time()
-    mp_pool_count = max(mp.cpu_count() - 1, 1)
-    print(f'Using {mp_pool_count} cores for multiprocessing.')
+    use_mp = False
 
-    hm_kaggle_tool = KaggleTool('h-and-m-personalized-fashion-recommendations')
+    if use_mp:
+        mp_pool_count = max(mp.cpu_count() - 1, 1)
+        print(f'Using {mp_pool_count} cores for multiprocessing.')
 
-    run_seasonal_analysis_bulk(hm_kaggle_tool)
+        run_seasonal_analysis_parallel(mp_pool_count)
+
+    else:
+        for combination in get_combinations():
+            _run_seasonal_analysis(*combination)
