@@ -106,13 +106,7 @@ class CalendarDay:
 class Season:
     """
     Season class that holds information about a season.
-
-    :cvar max_score_offset: Offset from start of season to max score day.
-    :cvar max_score_day_range: Range of days around max score day that can be scored.
     """
-    max_score_offset = -30
-    max_score_day_range = 30
-
     def __init__(self, season_name: str, start_doy: CalendarDay, end_doy: CalendarDay):
         """
         :param season_name: Season name
@@ -127,9 +121,8 @@ class Season:
             end_doy = CalendarDay(end_doy)
         self.end_doy = end_doy
 
-    @property
-    def max_score_day(self):
-        return self.start_doy + self.max_score_offset
+    def max_score_day(self, max_score_offset: int) -> CalendarDay:
+        return self.start_doy + max_score_offset
 
     def __str__(self):
         return self.season_name
@@ -167,16 +160,18 @@ class Season:
         calendar_day = CalendarDay(date_doy)
         return calendar_day.days_until(self.end_doy) <= self.season_length()
 
-    def get_season_score(self, date: pd.Timestamp) -> float:
+    def get_season_score(self, date: pd.Timestamp, max_score_offset: int, max_score_day_range: int) -> float:
         """
         Returns the season score of the item for the given date.
         :param date: Date to get season score for.
+        :param max_score_offset: Offset from start of season to max score day.
+        :param max_score_day_range: Range of days around max score day to calculate score for.
         :return: Season score for given date.
         """
         date_doy = date.dayofyear
         calendar_day = CalendarDay(date_doy)
-        distance_from = calendar_day.distance_from(self.max_score_day)
-        score = max(0, self.max_score_day_range - distance_from)
+        distance_from = calendar_day.distance_from(self.max_score_day(max_score_offset))
+        score = max(0, max_score_day_range - distance_from)
         return score
 
 
