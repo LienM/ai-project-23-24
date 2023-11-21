@@ -52,11 +52,16 @@ class KaggleTool:
     """
     Utility class for working with Kaggle
     """
+    is_authenticated = False
+
     def __init__(self, competition: str):
         self.api = kaggle.api
         self.competition = competition
 
         self.api.authenticate()
+        if not self.is_authenticated:
+            self.api.authenticate()
+
 
     def list_submissions(self, competition: str = None):
         return self.api.competition_submissions(competition or self.competition)
