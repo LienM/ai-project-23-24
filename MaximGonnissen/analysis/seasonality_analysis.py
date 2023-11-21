@@ -1,7 +1,8 @@
 import datetime
 import time
-import multiprocessing as mp
 from pathlib import Path
+from typing import Union
+from io import BytesIO
 
 from utils.season import Season, seasons
 from utils.utils import DataFileNames, load_data_from_hnm, get_data_path, load_data, ProjectConfig
@@ -21,14 +22,16 @@ def get_season(date: pd.Timestamp) -> Season:
             return season
 
 
-def article_sales_per_date(transactions_df: pd.DataFrame) -> pd.DataFrame:
+def article_sales_per_date(transactions_df: pd.DataFrame, verbose: bool = True) -> pd.DataFrame:
     """
     Calculates sales per date for each article.
     :param transactions_df: DataFrame containing transactions.
+    :param verbose: Whether to print progress.
     :return: DataFrame containing sales per date for each article.
     """
     start_time = time.time()
-    print('[ ] Calculating sales per date for each article...')
+    if verbose:
+        print('[ ] Calculating sales per date for each article...')
 
     transactions_df_trimmed = transactions_df.copy()
     transactions_df_trimmed = transactions_df_trimmed[['t_dat', 'article_id']]
@@ -36,18 +39,22 @@ def article_sales_per_date(transactions_df: pd.DataFrame) -> pd.DataFrame:
 
     transactions_df_trimmed = transactions_df_trimmed.groupby(['article_id', 't_dat']).size().reset_index(name='count')
 
-    print(f'[X] Calculated sales per date for each article in {time.time() - start_time:.2f} seconds.')
+    if verbose:
+        print(f'[X] Calculated sales per date for each article in {time.time() - start_time:.2f} seconds.')
+
     return transactions_df_trimmed
 
 
-def calculate_seasonal_sales(df: pd.DataFrame) -> pd.DataFrame:
+def calculate_seasonal_sales(df: pd.DataFrame, verbose: bool = True) -> pd.DataFrame:
     """
     Given a DataFrame containing sales per date for each article, calculates the seasonal sales numbers for each article.
     :param df: DataFrame containing sales per date for each article.
+    :param verbose: Whether to print progress.
     :return: DataFrame containing seasonal sales numbers for each article.
     """
     start_time = time.time()
-    print('[ ] Calculating seasonal sales numbers for each article...')
+    if verbose:
+        print('[ ] Calculating seasonal sales numbers for each article...')
 
     new_df = df.copy()
     new_df['t_dat'] = pd.to_datetime(new_df['t_dat'])
@@ -56,34 +63,41 @@ def calculate_seasonal_sales(df: pd.DataFrame) -> pd.DataFrame:
 
     new_df = new_df.groupby(['article_id', 'season']).sum().reset_index()
 
-    print(f'[X] Calculated seasonal sales numbers for each article in {time.time() - start_time:.2f} seconds.')
+    if verbose:
+        print(f'[X] Calculated seasonal sales numbers for each article in {time.time() - start_time:.2f} seconds.')
+
     return new_df
 
 
-def calculate_season_scores(df: pd.DataFrame, max_score_offset: int, max_score_day_range: int) -> pd.DataFrame:
+def calculate_season_scores(df: pd.DataFrame, max_score_offset: int, max_score_day_range: int, verbose: bool = True) -> pd.DataFrame:
     """
     Given a DataFrame containing sales per date for each article, calculates the seasonal sales numbers for each article.
     :param df: DataFrame containing sales per date for each article.
     :param max_score_offset: Offset from start of season to max score day.
     :param max_score_day_range: Range of days around max score day to calculate score for.
+    :param verbose: Whether to print progress.
     :return: DataFrame containing seasonal sales numbers for each article.
     """
     start_time = time.time()
-    print('[ ] Calculating seasonal scores for each article...')
+    if verbose:
+        print('[ ] Calculating seasonal scores for each article...')
 
     new_df = df.copy()
     new_df['t_dat'] = pd.to_datetime(new_df['t_dat'])
 
-    with ProgressBar(seasons) as progress_bar:
+    with ProgressBar(seasons, show=verbose) as progress_bar:
         for season in progress_bar:
-            new_df[season.season_name] = new_df['t_dat'].apply(lambda x: season.get_season_score(x, max_score_offset, max_score_day_range))
+            new_df[season.season_name] = new_df['t_dat'].apply(
+                lambda x: season.get_season_score(x, max_score_offset, max_score_day_range))
 
     new_df = new_df.drop(columns=['t_dat'])
 
     new_df = new_df.groupby(['article_id']).sum().reset_index()
     new_df = new_df.drop(columns=['count'])
 
-    print(f'[X] Calculated seasonal scores for each article in {time.time() - start_time:.2f} seconds.')
+    if verbose:
+        print(f'[X] Calculated seasonal scores for each article in {time.time() - start_time:.2f} seconds.')
+
     return new_df
 
 
@@ -129,44 +143,50 @@ def predict_top_items(df: pd.DataFrame) -> list:
     return sorted(item_scores, key=item_scores.get, reverse=True)[:len(df['items'].iloc[0].split(' '))]
 
 
-def run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, rerun_seasonal_scores: bool) -> Path:
+def run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, rerun_seasonal_scores: bool,
+                          to_csv: bool = True, verbose: bool = True, submission_suffix: str = None) -> Union[Path, BytesIO]:
     # Output paths
     seasonal_scores_path = get_data_path() / DataFileNames.OUTPUT_DIR / 'seasonal_scores.csv'
     article_sales_per_date_path = get_data_path() / DataFileNames.OUTPUT_DIR / 'article_sales_per_date.csv'
     seasonal_sales_path = get_data_path() / DataFileNames.OUTPUT_DIR / 'seasonal_sales.csv'
     top_seasonal_sales_path = get_data_path() / DataFileNames.OUTPUT_DIR / 'top_seasonal_sales.csv'
 
-    print(f"Script started at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.")
-    print(f"Using season parameters: max_score_offset={max_score_offset}, max_score_day_range={max_score_day_range}.")
+    if verbose:
+        print(f"Script started at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.")
+        print(
+            f"Using season parameters: max_score_offset={max_score_offset}, max_score_day_range={max_score_day_range}.")
 
     article_sales_per_date_df = None
     if not article_sales_per_date_path.exists():
-        transactions_train = load_data_from_hnm(DataFileNames.TRANSACTIONS_TRAIN, dtype={'article_id': str})
+        transactions_train = load_data_from_hnm(DataFileNames.TRANSACTIONS_TRAIN, verbose, dtype={'article_id': str})
 
         # Calculate sales per date for each article
         article_sales_per_date_df = article_sales_per_date(transactions_train)
 
-        article_sales_per_date_df.to_csv(article_sales_per_date_path, index=False)
+        if to_csv:
+            article_sales_per_date_df.to_csv(article_sales_per_date_path, index=False)
     else:
-        article_sales_per_date_df = load_data(article_sales_per_date_path, dtype={'article_id': str})
+        article_sales_per_date_df = load_data(article_sales_per_date_path, verbose, dtype={'article_id': str})
 
     seasonal_sales_df = None
     if not seasonal_sales_path.exists():
         # Calculate seasonal sales numbers for each article
         seasonal_sales_df = calculate_seasonal_sales(article_sales_per_date_df)
 
-        seasonal_sales_df.to_csv(seasonal_sales_path, index=False)
+        if to_csv:
+            seasonal_sales_df.to_csv(seasonal_sales_path, index=False)
     else:
-        seasonal_sales_df = load_data(seasonal_sales_path, dtype={'article_id': str})
+        seasonal_sales_df = load_data(seasonal_sales_path, verbose, dtype={'article_id': str})
 
     seasonal_scores_df = None
     if not seasonal_scores_path.exists() or rerun_seasonal_scores:
         # Calculate seasonal scores for each article
-        seasonal_scores_df = calculate_season_scores(article_sales_per_date_df, max_score_offset, max_score_day_range)
+        seasonal_scores_df = calculate_season_scores(article_sales_per_date_df, max_score_offset, max_score_day_range, verbose=verbose)
 
-        seasonal_scores_df.to_csv(seasonal_scores_path, index=False)
+        if to_csv:
+            seasonal_scores_df.to_csv(seasonal_scores_path, index=False)
     else:
-        seasonal_scores_df = load_data(seasonal_scores_path, dtype={'article_id': str})
+        seasonal_scores_df = load_data(seasonal_scores_path, verbose, dtype={'article_id': str})
 
     top_seasonal_sales_df = None
     if not top_seasonal_sales_path.exists() or rerun_seasonal_scores:
@@ -174,25 +194,29 @@ def run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, rerun
         top_seasonal_sales_df = calculate_top_sales(seasonal_scores_df, ProjectConfig.DATA_END,
                                                     ProjectConfig.DATA_END + datetime.timedelta(days=7))
 
-        top_seasonal_sales_df.to_csv(top_seasonal_sales_path, index=False)
+        if to_csv:
+            top_seasonal_sales_df.to_csv(top_seasonal_sales_path, index=False)
     else:
-        top_seasonal_sales_df = load_data(top_seasonal_sales_path, dtype={'article_id': str})
+        top_seasonal_sales_df = load_data(top_seasonal_sales_path, verbose, dtype={'article_id': str})
 
     top_items = predict_top_items(top_seasonal_sales_df)
     top_items_string = ' '.join([str(item_id) for item_id in top_items])
 
-    submission_df = load_data_from_hnm(DataFileNames.SAMPLE_SUBMISSION)
+    submission_df = load_data_from_hnm(DataFileNames.SAMPLE_SUBMISSION, verbose)
     submission_df['prediction'] = top_items_string
 
-    output_path = get_data_path() / DataFileNames.OUTPUT_DIR / 'submission.csv'
-    submission_df.to_csv(output_path, index=False)
+    output = None
 
-    return output_path
+    if to_csv:
+        output = get_data_path() / DataFileNames.OUTPUT_DIR / ('submission' + (
+            f'_{submission_suffix}' if submission_suffix else '') + '.csv')
+    else:
+        output = BytesIO()
+
+    submission_df.to_csv(output, index=False)
+
+    return output
 
 
 if __name__ == '__main__':
-    script_start_time = time.time()
-    mp_pool_count = max(mp.cpu_count() - 1, 1)
-    print(f'Using {mp_pool_count} cores for multiprocessing.')
-
-    run_seasonal_analysis(-30, 30, True)
+    run_seasonal_analysis(-30, 30, True, to_csv=True, verbose=False, submission_suffix='test')
