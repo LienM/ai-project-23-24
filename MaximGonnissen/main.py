@@ -12,8 +12,6 @@ def already_ran_for(score_offset: int, day_range: int, kaggle_tool: KaggleTool):
 
     print([submission.get_filename() for submission in submissions])
 
-    exit()
-
     # Check if submission with same parameters already exists
     for submission in submissions:
         try:
