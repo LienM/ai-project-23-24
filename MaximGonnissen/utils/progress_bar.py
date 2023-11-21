@@ -28,7 +28,7 @@ class ProgressBar:
     def __init__(self, collection: Collection, bar_length: int = 20, show_count: bool = True,
                  clear_when_done: bool = True, show_estimate: bool = True, full_bar: str = '█', half_bar: str = '▌',
                  empty_bar: str = '░', bar_start: str = '[', bar_end: str = ']', ansi_colour: str = None,
-                 parent_progress_bar: 'ProgressBar' = None):
+                 parent_progress_bar: 'ProgressBar' = None, show: bool = True):
         """
         Create a new progress bar.
         :param bar_length: Length of the progress bar.
@@ -42,6 +42,7 @@ class ProgressBar:
         :param bar_end: Character to use for the end of the bar.
         :param ansi_colour: Colour to use for the progress bar.
         :param parent_progress_bar: Parent progress bar to nest this progress bar in.
+        :param show: Whether to show the progress bar.
         """
         self.collection = collection
         self.bar_length = bar_length
@@ -55,6 +56,7 @@ class ProgressBar:
         self.bar_end = bar_end
         self.progress_bar_colour = ansi_colour
         self.parent_progress_bar = parent_progress_bar
+        self.show = show
 
         self.children_progress_bars = []
 
@@ -139,7 +141,8 @@ class ProgressBar:
         """
         Update the progress bar.
         """
-        print(self.get_update_string() + '    ', end='')
+        if self.show:
+            print(self.get_update_string() + '    ', end='')
 
     def iterate(self):
         """
