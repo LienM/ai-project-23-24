@@ -64,7 +64,7 @@ class KaggleTool:
     def list_submissions_wrapped(self, competition: str = None):
         return [SubmissionWrapper(submission) for submission in self.list_submissions(competition)]
 
-    def upload_submission(self, file: str, message: str, competition: str = None, quiet: bool = True, metadata: dict = None):
+    def upload_submission(self, file: str, message: str = None, competition: str = None, quiet: bool = True, metadata: dict = None):
         if metadata is not None:
             metadata['message'] = message
             message = json.dumps(metadata)
