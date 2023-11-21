@@ -1,6 +1,7 @@
 import datetime
 import time
 import multiprocessing as mp
+from pathlib import Path
 
 from utils.season import Season, seasons
 from utils.utils import DataFileNames, load_data_from_hnm, get_data_path, load_data, ProjectConfig
@@ -18,16 +19,6 @@ def get_season(date: pd.Timestamp) -> Season:
     for season in seasons:
         if season.in_season(date):
             return season
-
-
-def get_season_score(season: Season, date: pd.Timestamp) -> float:
-    """
-    Returns the season score for a given date.
-    :param season: Season to get score for.
-    :param date: Date to get season score for.
-    :return: Season score for given date for given season.
-    """
-    return season.get_season_score(date)
 
 
 def article_sales_per_date(transactions_df: pd.DataFrame) -> pd.DataFrame:
@@ -69,10 +60,12 @@ def calculate_seasonal_sales(df: pd.DataFrame) -> pd.DataFrame:
     return new_df
 
 
-def calculate_season_scores(df: pd.DataFrame) -> pd.DataFrame:
+def calculate_season_scores(df: pd.DataFrame, max_score_offset: int, max_score_day_range: int) -> pd.DataFrame:
     """
     Given a DataFrame containing sales per date for each article, calculates the seasonal sales numbers for each article.
     :param df: DataFrame containing sales per date for each article.
+    :param max_score_offset: Offset from start of season to max score day.
+    :param max_score_day_range: Range of days around max score day to calculate score for.
     :return: DataFrame containing seasonal sales numbers for each article.
     """
     start_time = time.time()
@@ -83,7 +76,7 @@ def calculate_season_scores(df: pd.DataFrame) -> pd.DataFrame:
 
     with ProgressBar(seasons) as progress_bar:
         for season in progress_bar:
-            new_df[season.season_name] = new_df['t_dat'].apply(lambda x: season.get_season_score(x))
+            new_df[season.season_name] = new_df['t_dat'].apply(lambda x: season.get_season_score(x, max_score_offset, max_score_day_range))
 
     new_df = new_df.drop(columns=['t_dat'])
 
@@ -136,24 +129,15 @@ def predict_top_items(df: pd.DataFrame) -> list:
     return sorted(item_scores, key=item_scores.get, reverse=True)[:len(df['items'].iloc[0].split(' '))]
 
 
-if __name__ == '__main__':
-    script_start_time = time.time()
-    mp_pool_count = max(mp.cpu_count() - 1, 1)
-    print(f'Using {mp_pool_count} cores for multiprocessing.')
-
+def run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, rerun_seasonal_scores: bool) -> Path:
     # Output paths
     seasonal_scores_path = get_data_path() / DataFileNames.OUTPUT_DIR / 'seasonal_scores.csv'
     article_sales_per_date_path = get_data_path() / DataFileNames.OUTPUT_DIR / 'article_sales_per_date.csv'
     seasonal_sales_path = get_data_path() / DataFileNames.OUTPUT_DIR / 'seasonal_sales.csv'
     top_seasonal_sales_path = get_data_path() / DataFileNames.OUTPUT_DIR / 'top_seasonal_sales.csv'
 
-    # Overrides
-    Season.max_score_offset = -30
-    Season.max_score_day_range = 30
-    do_rerun_seasonal_scores = True
-
     print(f"Script started at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.")
-    print(f"Using season parameters: max_score_offset={Season.max_score_offset}, max_score_day_range={Season.max_score_day_range}.")
+    print(f"Using season parameters: max_score_offset={max_score_offset}, max_score_day_range={max_score_day_range}.")
 
     article_sales_per_date_df = None
     if not article_sales_per_date_path.exists():
@@ -176,16 +160,16 @@ if __name__ == '__main__':
         seasonal_sales_df = load_data(seasonal_sales_path, dtype={'article_id': str})
 
     seasonal_scores_df = None
-    if not seasonal_scores_path.exists() or do_rerun_seasonal_scores:
+    if not seasonal_scores_path.exists() or rerun_seasonal_scores:
         # Calculate seasonal scores for each article
-        seasonal_scores_df = calculate_season_scores(article_sales_per_date_df)
+        seasonal_scores_df = calculate_season_scores(article_sales_per_date_df, max_score_offset, max_score_day_range)
 
         seasonal_scores_df.to_csv(seasonal_scores_path, index=False)
     else:
         seasonal_scores_df = load_data(seasonal_scores_path, dtype={'article_id': str})
 
     top_seasonal_sales_df = None
-    if not top_seasonal_sales_path.exists() or do_rerun_seasonal_scores:
+    if not top_seasonal_sales_path.exists() or rerun_seasonal_scores:
         # Calculate top seasonal sales
         top_seasonal_sales_df = calculate_top_sales(seasonal_scores_df, ProjectConfig.DATA_END,
                                                     ProjectConfig.DATA_END + datetime.timedelta(days=7))
@@ -202,3 +186,13 @@ if __name__ == '__main__':
 
     output_path = get_data_path() / DataFileNames.OUTPUT_DIR / 'submission.csv'
     submission_df.to_csv(output_path, index=False)
+
+    return output_path
+
+
+if __name__ == '__main__':
+    script_start_time = time.time()
+    mp_pool_count = max(mp.cpu_count() - 1, 1)
+    print(f'Using {mp_pool_count} cores for multiprocessing.')
+
+    run_seasonal_analysis(-30, 30, True)
