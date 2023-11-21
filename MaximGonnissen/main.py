@@ -10,8 +10,6 @@ import json
 def already_ran_for(score_offset: int, day_range: int, kaggle_tool: KaggleTool):
     submissions = kaggle_tool.list_submissions_wrapped()
 
-    print([submission.get_filename() for submission in submissions])
-
     # Check if submission with same parameters already exists
     for submission in submissions:
         try:
