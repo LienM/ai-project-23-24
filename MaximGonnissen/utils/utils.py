@@ -27,6 +27,7 @@ class DataFileNames:
     OUTPUT_DIR = 'output'
     PLOTS_DIR = 'plots'
     FEATURE_ENGINEERING_DIR = 'feature_engineering'
+    ZIP_DIR = 'zips'
 
 
 def get_data_path() -> pathlib.Path:
