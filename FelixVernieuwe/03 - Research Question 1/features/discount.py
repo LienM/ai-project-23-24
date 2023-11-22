@@ -6,7 +6,13 @@ from matplotlib import ticker
 PROMOTION_THRESHOLD = 0.6
 
 
-def discount_feature(transactions: pd.DataFrame):
+def discount_data(transactions: pd.DataFrame, promotion_threshold=PROMOTION_THRESHOLD):
+    """
+    For every week in the transactions history, determine for every article whether it was discounted
+    :param transactions: Transactions in the training period
+    :param promotion_threshold: Percentage of sales within a week that should be discounted to be considered a promotion
+    :return:
+    """
     maximum_product_price = transactions.groupby(['week', 'article_id'])['price'].max().reset_index()
 
     transactions = transactions.merge(maximum_product_price, on=['week', 'article_id'], suffixes=('', '_max'))
@@ -14,11 +20,24 @@ def discount_feature(transactions: pd.DataFrame):
 
     transactions['has_promotion'] = transactions['discount'] != 0
     promoted_articles = transactions.groupby(['week', 'article_id'])['has_promotion'].mean().reset_index()
-    promoted_articles['has_promotion'] = promoted_articles['has_promotion'] >= PROMOTION_THRESHOLD
-
-    promoted_articles = promoted_articles[promoted_articles['has_promotion'] == True]
+    promoted_articles['has_promotion'] = promoted_articles['has_promotion'] >= promotion_threshold
 
     return promoted_articles
+
+
+def discount_feature(transactions: pd.DataFrame, promotion_threshold=PROMOTION_THRESHOLD):
+    """
+    For every transaction, add a feature indicating whether the product was discounted when bought
+    :param transactions: Transactions in the training period
+    :param promotion_threshold: Percentage of sales within a week that should be discounted to be considered a promotion
+    :return: Transactions with 'has_promotion' feature added
+    """
+    promoted_articles = discount_data(transactions, promotion_threshold)
+
+    # Add the discount feature to the transactions
+    transactions = transactions.merge(promoted_articles, on=['week', 'article_id'], how='left')
+
+    return transactions
 
 
 def plot_weekly_promo_percentage(promoted_articles: pd.DataFrame):
@@ -59,6 +78,6 @@ def plot_product_sales(product, transactions: pd.DataFrame, promoted_articles: p
 def plot_random_product_sales(transactions: pd.DataFrame, promoted_articles: pd.DataFrame):
     # Sample a random article_id that has more than 1000 transactions
     product = \
-    transactions['article_id'].value_counts()[transactions['article_id'].value_counts() > 5000].sample(1).index[0]
+        transactions['article_id'].value_counts()[transactions['article_id'].value_counts() > 5000].sample(1).index[0]
 
     plot_product_sales(product, transactions, promoted_articles)
