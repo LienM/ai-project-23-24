@@ -3,10 +3,14 @@ import time
 from pathlib import Path
 from typing import Union
 from io import BytesIO
+import zipfile
+import json
+import multiprocessing as mp
 
 from utils.season import Season, seasons
 from utils.utils import DataFileNames, load_data_from_hnm, get_data_path, load_data, ProjectConfig
 from utils.progress_bar import ProgressBar
+from utils.kaggle_tool import KaggleTool
 
 import pandas as pd
 
@@ -69,7 +73,8 @@ def calculate_seasonal_sales(df: pd.DataFrame, verbose: bool = True) -> pd.DataF
     return new_df
 
 
-def calculate_season_scores(df: pd.DataFrame, max_score_offset: int, max_score_day_range: int, verbose: bool = True) -> pd.DataFrame:
+def calculate_season_scores(df: pd.DataFrame, max_score_offset: int, max_score_day_range: int,
+                            verbose: bool = True) -> pd.DataFrame:
     """
     Given a DataFrame containing sales per date for each article, calculates the seasonal sales numbers for each article.
     :param df: DataFrame containing sales per date for each article.
@@ -143,8 +148,9 @@ def predict_top_items(df: pd.DataFrame) -> list:
     return sorted(item_scores, key=item_scores.get, reverse=True)[:len(df['items'].iloc[0].split(' '))]
 
 
-def run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, rerun_seasonal_scores: bool,
-                          to_csv: bool = True, verbose: bool = True, submission_suffix: str = None) -> Union[Path, BytesIO]:
+def _run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, rerun_seasonal_scores: bool,
+                          to_csv: bool = True, verbose: bool = True, submission_suffix: str = None) -> Union[
+    Path, BytesIO]:
     # Output paths
     seasonal_scores_path = get_data_path() / DataFileNames.OUTPUT_DIR / 'seasonal_scores.csv'
     article_sales_per_date_path = get_data_path() / DataFileNames.OUTPUT_DIR / 'article_sales_per_date.csv'
@@ -181,7 +187,8 @@ def run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, rerun
     seasonal_scores_df = None
     if not seasonal_scores_path.exists() or rerun_seasonal_scores:
         # Calculate seasonal scores for each article
-        seasonal_scores_df = calculate_season_scores(article_sales_per_date_df, max_score_offset, max_score_day_range, verbose=verbose)
+        seasonal_scores_df = calculate_season_scores(article_sales_per_date_df, max_score_offset, max_score_day_range,
+                                                     verbose=verbose)
 
         if to_csv:
             seasonal_scores_df.to_csv(seasonal_scores_path, index=False)
@@ -208,8 +215,8 @@ def run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, rerun
     output = None
 
     if to_csv:
-        output = get_data_path() / DataFileNames.OUTPUT_DIR / ('submission' + (
-            f'_{submission_suffix}' if submission_suffix else '') + '.csv')
+        output = get_data_path() / DataFileNames.OUTPUT_DIR / (
+                    'submission' + (f'_{submission_suffix}' if submission_suffix else '') + '.csv')
     else:
         output = BytesIO()
 
@@ -218,5 +225,63 @@ def run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, rerun
     return output
 
 
+def already_ran_for(score_offset: int, day_range: int, kaggle_tool: KaggleTool):
+    submissions = kaggle_tool.list_submissions_wrapped()
+
+    # Check if submission with same parameters already exists
+    for submission in submissions:
+        try:
+            description = submission.parse_json_description()
+        except json.decoder.JSONDecodeError:
+            continue
+        if description['max_score_offset'] == score_offset and description['max_score_day_range'] == day_range:
+            return True
+
+    return False
+
+
+def run_seasonal_analysis(max_score_offset: int, max_score_day_range: int):
+    kaggle_tool = KaggleTool('h-and-m-personalized-fashion-recommendations')
+
+    if already_ran_for(max_score_offset, max_score_day_range, kaggle_tool):
+        print(
+            f'> Already ran analysis for max_score_offset={max_score_offset} and max_score_day_range={max_score_day_range}.')
+        return
+
+    print(f'> Running analysis for max_score_offset={max_score_offset} and max_score_day_range={max_score_day_range}.')
+
+    start_time = time.time()
+    output_bytes = _run_seasonal_analysis(max_score_offset, max_score_day_range, True, verbose=False, to_csv=False)
+
+    print(
+        f'> Finished analysis for max_score_offset={max_score_offset} and max_score_day_range={max_score_day_range} in {time.time() - start_time} seconds.')
+
+    print(f'> Zipping output')
+    zip_path = get_data_path() / DataFileNames.OUTPUT_DIR / DataFileNames.ZIP_DIR / f'seasonal_analysis_{max_score_offset}_{max_score_day_range}.zip'
+
+    if not zip_path.parent.exists():
+        zip_path.parent.mkdir(parents=True)
+
+    with zipfile.ZipFile(zip_path, 'w') as zip_file:
+        zip_file.writestr('seasonal_analysis.csv', output_bytes.getvalue())
+
+    print(f'> Uploading output to Kaggle')
+    metadata = {'max_score_offset': max_score_offset, 'max_score_day_range': max_score_day_range, }
+    kaggle_tool.upload_submission(zip_path, metadata=metadata)
+
+    return
+
+
+def run_seasonal_analysis_parallel(_mp_pool_count: int, combinations: list):
+    """
+    Runs seasonal analysis for a range of parameters and uploads the results to Kaggle.
+    Processing is done in parallel using multiprocessing.
+    :param _mp_pool_count: Number of processes to use for multiprocessing
+    :param combinations: List of tuples containing the parameters to run the analysis for
+    """
+    with mp.Pool(_mp_pool_count) as pool:
+        pool.starmap(_run_seasonal_analysis, combinations)
+
+
 if __name__ == '__main__':
-    run_seasonal_analysis(-30, 30, True, to_csv=True, verbose=False, submission_suffix='test')
+    _run_seasonal_analysis(-30, 30, True, to_csv=True, verbose=False, submission_suffix='test')
