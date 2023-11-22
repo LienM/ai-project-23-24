@@ -139,6 +139,8 @@ class LastFM(BasicDataset):
 
         # (users,items), bipartite graph
         self.UserItemNet = csr_matrix((np.ones(len(self.trainUser)), (self.trainUser, self.trainItem) ), shape=(self.n_users,self.m_items))
+        print(self.UserItemNet.shape)
+        print(self.UserItemNet)
         # pre-calculate
         self._allPos = self.getUserPosItems(list(range(self.n_users)))
         # self.allNeg = []
@@ -185,7 +187,7 @@ class LastFM(BasicDataset):
             second_sub = torch.stack([item_dim+self.n_users, user_dim])
             index = torch.cat([first_sub, second_sub], dim=1)
             data = torch.ones(index.size(-1)).int()
-            self.Graph = torch.sparse.IntTensor(index, data, torch.Size([self.n_users+self.m_items, self.n_users+self.m_items]))
+            self.Graph = torch.sparse_coo_tensor(index, data, torch.Size([self.n_users+self.m_items, self.n_users+self.m_items]))
 
             dense = self.Graph.to_dense()
             D = torch.sum(dense, dim=1).float()
