@@ -10,9 +10,9 @@ from embeddings import create_image_embeddings, create_text_embeddings, IMAGE_EM
 
 def rank():
     test_week = 105
-    reduction_size = 300
+    reduction_size = 700
     embeddings = "data/embeddings/text_embeddings_plain.parquet"
-    index = f"data/indices/text_index_{reduction_size}.ann"
+    index = f"data/indices/text_index_{reduction_size}.joblib"
     ranker = EmbeddingRanker(test_week, embeddings, index, reduction_size=reduction_size)
     predictions = ranker.rank()
     predictions.to_csv("submissions/text.csv.gz", index=False)
@@ -27,9 +27,9 @@ def evaluate():
 
 @logger.catch
 def main():
-    create_image_embeddings("data/images.nosync", "data/embeddings/image_embeddings.parquet")
-    create_text_embeddings("data/article.csv", "data/embeddings/text_embeddings_plain.parquet", template="plain")
-    concatenate_embeddings("data/embeddings/text_embeddings_plain.parquet", "data/embeddings/image_embeddings.parquet", "data/embeddings/concatenated_embeddings.parquet")
+    # create_image_embeddings("data/images.nosync", "data/embeddings/image_embeddings.parquet")
+    # create_text_embeddings("data/article.csv", "data/embeddings/text_embeddings_plain.parquet", template="plain")
+    # concatenate_embeddings("data/embeddings/text_embeddings_plain.parquet", "data/embeddings/image_embeddings.parquet", "data/embeddings/concatenated_embeddings.parquet")
 
     rank()
     # evaluate()
