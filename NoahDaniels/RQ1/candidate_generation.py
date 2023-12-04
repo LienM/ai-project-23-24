@@ -1,5 +1,10 @@
 import pandas as pd
-
+from fastbm25 import fastbm25
+import re
+from tqdm.notebook import tqdm
+from transformers import GPT2LMHeadModel, GPT2Tokenizer, GPT2Config
+from transformers import TextDataset, DataCollatorForLanguageModeling
+from transformers import Trainer, TrainingArguments
 
 # def get_shifted_weeks(t):
 #     def list_min_first(arg):
@@ -118,6 +123,131 @@ def candidates_repurchase(baskets, train_data, d=1, relative=True):
     return pd.merge(baskets, rep, on=["customer_id", "week"])
 
 
+def candidates_repurchase_bm25(baskets, train_data, articles, d=1, k=3, relative=True):
+    """
+    Generate candidates for each basket (customer, week) by taking the items that were purchased in the previous d weeks.
+    If relative is True, only look in the d previous weeks that the customer bought something
+    """
+
+    # setup BM25
+    def tokenize(string):
+        return re.sub(r"[^0-9a-zA-Z ]", "", string.lower()).split(" ")
+
+    popular_articles = pd.merge(
+        train_data.article_id.value_counts()
+        .head(10000)
+        .index.to_frame("article_id")
+        .reset_index(drop=True),
+        articles[["article_id", "descriptor"]],
+    )
+    corpus = list(popular_articles.descriptor.apply(tokenize).values)
+    bm25 = fastbm25(corpus)
+
+    def get_repurchased(df):
+        repurchase_data = df.drop_duplicates(["customer_id", "article_id"])[
+            ["customer_id", "article_id"]
+        ]
+        a = pd.merge(repurchase_data, articles, how="left", on="article_id")[
+            ["customer_id", "descriptor"]
+        ].drop_duplicates(["customer_id", "descriptor"])
+
+        results = []
+        for d in tqdm(a.itertuples(index=False), total=len(a)):
+            user = d.customer_id
+            desc = d.descriptor
+
+            c = bm25.top_k_sentence(tokenize(desc), k=k)
+            results.extend(
+                [(user, popular_articles.iloc[i].article_id) for _, i, _ in c]
+            )
+
+        return pd.DataFrame(results, columns=["customer_id", "article_id"])
+
+    rep = by_week(baskets.week.unique(), train_data, d, get_repurchased, relative)
+
+    return pd.merge(baskets, rep, on=["customer_id", "week"])
+
+
+def candidates_gpt4rec(baskets, train_data, articles, d=1, k=3, relative=True):
+    """
+    Generate candidates for each basket (customer, week) by taking the items that were purchased in the previous d weeks.
+    If relative is True, only look in the d previous weeks that the customer bought something
+    """
+
+    def generate_prompt(history):
+        previous_items = history[-6:-1]
+        return f"Previously, a customer has bought the following items: <{'>, <'.join(previous_items)}>. In the future, this customer will want to buy <"
+
+    # setup GPT-2
+    tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
+    model = GPT2LMHeadModel.from_pretrained(
+        "../LLM/output5", pad_token_id=tokenizer.eos_token_id
+    )
+
+    def generate(p):
+        prompt = tokenizer.encode(
+            p, return_tensors="pt", truncation=True, max_length=999
+        )
+        results = model.generate(
+            prompt, max_new_tokens=100, num_return_sequences=3, num_beams=5
+        )
+        for q in results:
+            query = tokenizer.decode(q[len(prompt[0]) :], skip_special_tokens=True)[:-1]
+            yield query
+
+    # setup BM25
+    def tokenize(string):
+        return re.sub(r"[^0-9a-zA-Z ]", "", string.lower()).split(" ")
+
+    popular_articles = pd.merge(
+        train_data.article_id.value_counts()
+        .head(10000)
+        .index.to_frame("article_id")
+        .reset_index(drop=True),
+        articles[["article_id", "descriptor"]],
+    )
+    corpus = list(popular_articles.descriptor.apply(tokenize).values)
+    bm25 = fastbm25(corpus)
+
+    def get_repurchased(df):
+        repurchase_data = df.drop_duplicates(["customer_id", "article_id"])[
+            ["customer_id", "article_id"]
+        ]
+        a = pd.merge(repurchase_data, articles, how="left", on="article_id")[
+            ["customer_id", "descriptor"]
+        ].drop_duplicates(["customer_id", "descriptor"])
+
+        prompts = a.groupby("customer_id").descriptor.apply(list).apply(generate_prompt)
+
+        results = []
+        for customer_id, prompt in tqdm(prompts.items(), total=len(prompts)):
+            for q in generate(prompt):
+                art = bm25.top_k_sentence(tokenize(q), k=10)
+                results.extend(
+                    [
+                        (customer_id, popular_articles.iloc[idx].article_id)
+                        for (_, idx, _) in art
+                    ]
+                )
+
+        return pd.DataFrame(results, columns=["customer_id", "article_id"])
+
+        # results = []
+        # for d in tqdm(a.itertuples(index=False), total=len(a)):
+        #     user = d.customer_id
+        #     desc = d.descriptor
+
+        #     c = bm25.top_k_sentence(tokenize(desc), k=k)
+        #     results.extend([(user, articles.iloc[i].article_id) for _, i, _ in c])
+
+        # return pd.DataFrame(results, columns=["customer_id", "article_id"])
+
+    histories = pd.merge(train_data, baskets, on=["customer_id"], how="inner")
+    rep = by_week(baskets.week.unique(), histories, d, get_repurchased, relative)
+
+    return pd.merge(baskets, rep, on=["customer_id", "week"])
+
+
 # popular k1 items (previous l1 weeks), within group of similar customers (customer feature)
 def candidates_customer_feature(
     baskets, train_data, customers, feature, k=3, d=1, relative=False
@@ -128,7 +258,7 @@ def candidates_customer_feature(
     """
 
     tt = pd.merge(train_data, customers, how="left", on="customer_id")[
-        ["customer_id", "week", "article_id", feature]
+        ["customer_id", "week", "week_rel", "article_id", feature]
     ]
     bb = pd.merge(baskets, customers, how="left", on="customer_id")[
         ["customer_id", "week", feature]
@@ -189,8 +319,9 @@ def candidates_article_feature(
 
     pops = by_week(baskets.week.unique(), tt, d1, get_popular_by_feature, rel1)
     hists = by_week(baskets.week.unique(), tt, d2, get_common_features, rel2)
+    histories = pd.merge(hists, baskets, on=["customer_id", "week"])
 
-    return pd.merge(hists, pops, on=["week", feature])[
+    return pd.merge(histories, pops, on=["week", feature])[
         ["customer_id", "week", "article_id"]
     ]
 

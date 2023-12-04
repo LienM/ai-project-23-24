@@ -5,6 +5,8 @@ import numpy
 from tqdm import tqdm
 from annoy import AnnoyIndex
 from sklearn.decomposition import PCA
+from sklearn.neighbors import BallTree
+from joblib import load, dump
 
 from baseline.baseline_functions import create_submission, get_purchases, mean_average_precision
 
@@ -48,6 +50,16 @@ class EmbeddingRanker:
                              .groupby("customer_id")
         )
 
+        # Adapted from NoahDaniels' baseline
+        # self.popular_data = self.transactions[self.transactions.week % 52 == (test_week - 1) % 52] \
+        self.popular_data = self.transactions[self.transactions.week == test_week - 1] \
+                                .reset_index(drop=True) \
+                                .groupby("week")["article_id"].value_counts() \
+                                .groupby("week").rank(method="dense", ascending=False) \
+                                .groupby("week").head(25).rename('bestseller_rank').astype('int8') \
+                                .to_frame().reset_index(names=["week", "article_id"])
+        self.popular_data = pandas.merge(self.popular_data, self.embeddings, how="inner", on="article_id")
+
     def evaluate(self, predictions):
         purchases = get_purchases(self.transactions)
         print("Mean Average Precision: ", mean_average_precision(predictions, purchases))
@@ -60,22 +72,23 @@ class EmbeddingRanker:
 
     # Calculate weight for every article based on week article was bought in and test week
     def calculate_weights(self, weeks):
-        weights = numpy.cos(2 * numpy.pi / PERIOD * (weeks - self.test_week))
+        weights = numpy.cos(2 * numpy.pi / PERIOD * (weeks - self.test_week)) + 1
         return numpy.exp(weights) / sum(numpy.exp(weights))
 
     def rank_customer(self, customer_id):
-        customer_embedding = None
+        transactions = self.popular_data[["embedding", "week"]].sample(n=25)
         if customer_id in self.grouped_transactions.groups:
             # retrieve all customer transactions
-            transactions = self.grouped_transactions.get_group(customer_id)
+            transactions = pandas.concat([
+                self.grouped_transactions.get_group(customer_id)[["embedding", "week"]],
+                transactions
+            ])
 
-            # calculate weights and compute weighted average
-            embeddings = transactions["embedding"].to_numpy()
-            weights = self.calculate_weights(transactions["week"].to_numpy())
-            if embeddings.shape != (0,):
-                customer_embedding = numpy.average(numpy.stack(embeddings), axis=0, weights=weights)
-        if customer_embedding is None:
-            customer_embedding = numpy.zeros(self.index.embedding_size)
+        # calculate weights and compute weighted average
+        embeddings = transactions["embedding"].to_numpy()
+        weights = self.calculate_weights(transactions["week"].to_numpy())
+        if embeddings.shape != (0,):
+            customer_embedding = numpy.average(numpy.stack(embeddings), axis=0, weights=weights)
 
         # Retrieve nearest neighbours using index
         nearest_neighbours = self.index.embedding_index.get_nns_by_vector(customer_embedding, 12)

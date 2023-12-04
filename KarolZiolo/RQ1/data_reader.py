@@ -13,12 +13,14 @@ from tqdm import tqdm
 import pickle
 from scipy.sparse import csr_matrix
 from sklearn.model_selection import train_test_split
+from sklearn import preprocessing 
+from sklearn.cluster import KMeans
+
 
 os.chdir("/Users/karol/Desktop/Antwerp/ai_project/")
 ARTICLES_PATH = "/Users/karol/Desktop/Antwerp/ai_project/data/articles.csv"
 CUSTOMER_PATH = "/Users/karol/Desktop/Antwerp/ai_project/data/customers.csv"
 TRANSACTION_PATH = "/Users/karol/Desktop/Antwerp/ai_project/data/transactions_train.csv"
-
 
 #######################################################################################
 #                                 Data Transformations                                #
@@ -213,6 +215,17 @@ def create_random_candidates(transactions, save_dir=None, num_sample=30_000_000)
         shuffled_df.to_csv(save_dir)
     return shuffled_df
 
+def articles_embbedings():
+    # read article and customer data
+    articles = pd.read_csv("data/preprocessed/articles.csv") 
+    # set indices
+    articles = articles.set_index("article_id")
+    # get embedding dims
+    article_cat_dim = []
+    for art_col in articles.columns:
+        article_cat_dim.append(len(articles[art_col].unique()))
+    return article_cat_dim
+
 #######################################################################################
 #                                    Dataset Classes                                  #
 #######################################################################################
@@ -388,3 +401,238 @@ def load_customers_articles(customers, articles, test_customers=[], batch_size=1
     dataloader_cust = DataLoader(dataset_cust, batch_size=batch_size, collate_fn=sparse_batch_collate_single)
     dataloader_art = DataLoader(dataset_art, batch_size=batch_size, collate_fn=sparse_batch_collate_single)
     return dataloader_cust, dataloader_art
+
+#######################################################################################
+#                             Customer Diversification                                #
+#######################################################################################
+
+def sales_channel_preference(customers, transactions):
+    grouped = transactions.groupby(["customer_id", "sales_channel_id"])["article_id"].count()
+    percentages = grouped / grouped.groupby(level=0).transform("sum")
+    # create first_cahnnel feature
+    first_sales_channel = percentages[percentages.index.get_level_values('sales_channel_id') == 1]
+    first_sales_channel = first_sales_channel.rename("first_channel")
+    customers = customers.merge(first_sales_channel, how="left", on="customer_id")
+    customers["first_channel"] = customers["first_channel"].fillna(0)
+    # create second_cahnnel feature
+    second_sales_channel = percentages[percentages.index.get_level_values('sales_channel_id') == 2]
+    second_sales_channel = second_sales_channel.rename("second_channel")
+    customers = customers.merge(second_sales_channel, how="left", on="customer_id")
+    customers["second_channel"] = customers["second_channel"].fillna(0)
+    return customers
+
+def favourite_colour(customers, articles, transactions, quarter=4):
+    # get specific quarter we are interested in
+    transactions["t_dat"] = pd.to_datetime(transactions["t_dat"])
+    transactions["quarter"] = transactions["t_dat"].dt.quarter  
+    transactions = transactions[transactions["quarter"]==quarter]
+    # merge colour information
+    transactions = transactions.merge(articles[["article_id","perceived_colour_master_name"]], how="left", on="article_id")
+    # get favourite colors
+    grouped = transactions.groupby(["customer_id","perceived_colour_master_name"])["article_id"].count()
+    max_indices = grouped.groupby(level=0).idxmax()
+    favourite_color = grouped.loc[max_indices]
+    favourite_color = favourite_color.rename("favourite_color")
+    customers = customers.merge(favourite_color, how="left", on="customer_id")
+    # Fill NAs with -1 indicating customer didn't buy anythin
+    customers["favourite_color"] = customers["favourite_color"].fillna(-1)
+    return customers
+
+def preferred_garment(customers, articles, transactions):
+    transactions = transactions.merge(articles[["article_id","garment_group_name"]], how="left", on="article_id")
+    grouped = transactions.groupby(["customer_id", "garment_group_name"])["article_id"].count()
+    percentages = grouped / grouped.groupby(level=0).transform("sum")
+    preferred_garment = percentages[percentages > 0.5]
+    df_garment = pd.DataFrame(preferred_garment).reset_index()[["customer_id","garment_group_name"]]
+    df_garment.rename(columns={"garment_group_name":"preferred_garment"}, inplace=True)
+    customers = customers.merge(df_garment, how="left", on="customer_id")
+    customers["preferred_garment"] = customers["preferred_garment"].fillna(-1)
+    return customers
+
+def avg_price(customers, transactions):
+    avg_grouped = transactions.groupby("customer_id")["price"].mean()
+    avg_grouped = avg_grouped.rename("avg_price")
+    customers = customers.merge(avg_grouped, how="left", on="customer_id")
+    customers["avg_price"] = customers["avg_price"].fillna(0)
+    return customers
+    
+def amount_purchases(customers, transactions, date_thrashold="2020-08-22"):
+    # select recent transactions
+    transactions["t_dat"] = pd.to_datetime(transactions["t_dat"])
+    transactions = transactions[transactions["t_dat"]>date_thrashold]
+    # get counts
+    grouped = transactions.groupby("customer_id")["article_id"].count()
+    grouped = grouped.rename("amount_purchases")
+    customers = customers.merge(grouped, how="left", on="customer_id")
+    customers["amount_purchases"] = customers["amount_purchases"].fillna(0)
+    return customers
+
+def sex_kid_estimation(customers, articles, transactions):
+    transactions = transactions.merge(articles[["article_id", "index_name"]], how="left", on="article_id")
+    grouped = transactions.groupby(["customer_id", "index_name"])["article_id"].count()
+    percentages = grouped/grouped.groupby(level=0).transform("sum")
+    # get menswear 
+    manswear = percentages[percentages.index.get_level_values('index_name') == 3]
+    manswear = manswear.rename("manswear")
+    customers = customers.merge(manswear, how="left", on="customer_id")
+    customers["manswear"] = customers["manswear"].fillna(0)
+    # get ledieswear
+    ladieswear = percentages[percentages.index.get_level_values('index_name').isin([0,1,4])].groupby("customer_id").sum()
+    ladieswear = ladieswear.rename("ladieswear")
+    customers = customers.merge(ladieswear, how="left", on="customer_id")
+    customers["ladieswear"] = customers["ladieswear"].fillna(0)
+    # get kids 
+    kids = percentages[percentages.index.get_level_values('index_name').isin([2,6,8,9])].groupby("customer_id").sum()
+    kids = kids.rename("kids")
+    customers = customers.merge(kids, how="left", on="customer_id")
+    customers["kids"] = customers["kids"].fillna(0)
+    return customers
+
+def customer_clustering(customers,transactions, articles):
+    merged = transactions.merge(articles[["article_id","product_type_name","index_name","garment_group_name"]], on="article_id")
+
+    # Get customers baskets
+    customer_baskets = merged.groupby("customer_id")["index_name"].unique()
+
+    # Create a list of unique product_type_name values across all customers
+    all_unique_products = np.unique(merged["index_name"])
+
+    # Create a numpy matrix to store the basket data
+    matrix = np.zeros((len(customer_baskets), np.max(all_unique_products)+1), dtype=int)
+
+    # Populate the matrix with 1s for each customer's products
+    for i, basket in enumerate(customer_baskets):
+        matrix[i, basket] = 1
+    # Normalize matrix
+    matrix_norm = preprocessing.normalize(matrix)
+    # Set final number of clusters
+    n_cluster = 35
+    # Create kmeans class and predict clusters for customers
+    kmeans = KMeans(n_clusters=n_cluster, n_init="auto")
+    index_name_cluster = kmeans.fit_predict(matrix_norm)
+    index_name_cluster = pd.DataFrame(zip(customer_baskets.keys(), index_name_cluster), columns=["customer_id","index_name_cluster"])
+    # Merge dataframes
+    customers = customers.merge(index_name_cluster, on="customer_id", how="left")
+    return customers
+
+def customers_diversification(customers, transactions, articles):
+    customers = sales_channel_preference(customers, transactions)
+    customers = favourite_colour(customers, articles, transactions, quarter=4)
+    customers = preferred_garment(customers, articles, transactions)
+    customers = avg_price(customers, transactions)
+    customers = amount_purchases(customers, transactions, date_thrashold="2020-08-22")
+    customers = sex_kid_estimation(customers, articles, transactions)
+    customers = customer_clustering(customers,transactions, articles)
+    return customers
+
+#######################################################################################
+#                             Articles Diversification                                #
+#######################################################################################
+
+def assign_season(x):
+    if x in [12,1,2]:
+        return 1
+    elif x in [3,4,5]:
+        return 2
+    elif x in [6,7,8]:
+        return 3
+    else:
+        return 4 
+
+def seasonal_sales(a, t):
+    # get seasons
+    t["t_dat"] = pd.to_datetime(t["t_dat"])
+    t["month"] = t["t_dat"].dt.month 
+    # get function to apply seasons
+    t["season"] = t["month"].apply(assign_season)
+    grouped = t.groupby(["article_id", "season"])["customer_id"].count()
+    # get percentages
+    percentages = grouped / grouped.groupby(level=0).transform("sum")
+    # create winter sale var
+    winter_sale = percentages[percentages.index.get_level_values('season') == 1]
+    winter_sale = winter_sale.rename("winter_sale")
+    a = a.merge(winter_sale, how="left", on="article_id")
+    a["winter_sale"] = a["winter_sale"].fillna(0)
+    # create spring sale var
+    spring_sale = percentages[percentages.index.get_level_values('season') == 2]
+    spring_sale = spring_sale.rename("spring_sale")
+    a = a.merge(spring_sale, how="left", on="article_id")
+    a["spring_sale"] = a["spring_sale"].fillna(0)
+    # create summer sale var
+    summer_sale = percentages[percentages.index.get_level_values('season') == 3]
+    summer_sale = summer_sale.rename("summer_sale")
+    a = a.merge(summer_sale, how="left", on="article_id")
+    a["summer_sale"] = a["summer_sale"].fillna(0)
+    # create autumn sale var
+    autumn_sale = percentages[percentages.index.get_level_values('season') == 4]
+    autumn_sale = autumn_sale.rename("autumn_sale")
+    a = a.merge(autumn_sale, how="left", on="article_id")
+    a["autumn_sale"] = a["autumn_sale"].fillna(0)
+    return a
+
+def get_avg_price(a, t):
+    grouped = t.groupby("article_id")["price"].mean()
+    grouped = grouped.rename("avg_price")
+    a = a.merge(grouped, how="left", on="article_id")
+    a["avg_price"] = a["avg_price"].fillna(-1)
+    return a
+
+def seasonal_bestseller_ranking(a, t):
+    # get seasons
+    t["t_dat"] = pd.to_datetime(t["t_dat"])
+    t["month"] = t["t_dat"].dt.month 
+    # get function to apply seasons
+    t["season"] = t["month"].apply(assign_season)
+    t["year"] = t["t_dat"].dt.year 
+    # Create a new DataFrame with the count of t for each (year, season, article_id) combination
+    transaction_counts = t.groupby(["year", "season", "article_id"])["customer_id"].count().reset_index()
+    transaction_counts.rename(columns={"customer_id": "transaction_count"}, inplace=True)
+
+    # Create rankings within each (year, season) group based on transaction counts
+    transaction_counts['article_rank'] = transaction_counts.groupby(["year", "season"])['transaction_count'].rank(ascending=False, method='dense')
+    for year in transaction_counts.year.unique():
+        for season in transaction_counts[transaction_counts.year==year].season.unique():
+            t = transaction_counts[(transaction_counts.year==year) & (transaction_counts.season==season)]
+            a = a.merge(t[["article_id","article_rank"]], how="left", on="article_id")
+            a["article_rank"] = a["article_rank"].fillna(np.max(a.article_id))
+            new_name = {"article_rank":"rank_"+str(season)+"_"+str(year)}
+            a = a.rename(columns=new_name)
+    return a
+
+def age_articles_preference(a,t,c):
+    bins = [0,25,40,55,float("inf")]
+    labels = ["young_preference","adult_preferences","middle_aged_preference","senior_preference"]
+    c["age_group"] = pd.cut(c["age"], bins=bins, labels=labels, right=False)
+    print("AGE GROUP DISTRIBUTION\n")
+    print(c["age_group"].value_counts())
+    t = t.merge(c[["customer_id","age_group"]], how="left", on="customer_id")
+    grouped = t.groupby(["article_id", "age_group"])["customer_id"].count()
+    percentages = grouped / grouped.groupby(level=0).transform("sum")
+    for label in labels:
+    # merge young
+        preference = percentages[percentages.index.get_level_values('age_group') == label]
+        preference = preference.rename(label)
+        a = a.merge(preference, how="left", on="article_id")
+        a[label] = a[label].fillna(0)
+    return a
+
+def articles_sales_channel(a,t):
+    grouped = t.groupby(["article_id", "sales_channel_id"])["customer_id"].count()
+    percentages = grouped / grouped.groupby(level=0).transform("sum")
+    for channel in t["sales_channel_id"].unique():
+        preference = percentages[percentages.index.get_level_values('sales_channel_id') == channel]
+        name = "sales_channel_"+str(channel)
+        preference = preference.rename(name)
+        a = a.merge(preference, how="left", on="article_id")
+        a[name] = a[name].fillna(0)
+    return a
+
+def articles_diversification(articles, transactions, customers):
+    articles = seasonal_sales(articles, transactions)
+    articles = get_avg_price(articles, transactions)
+    articles = seasonal_bestseller_ranking(articles, transactions)
+    articles = age_articles_preference(articles, transactions, customers)
+    articles = articles_sales_channel(articles,transactions)
+    return articles
+
+    
