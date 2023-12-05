@@ -56,17 +56,18 @@ def add_gender(customers_df: pd.DataFrame, transactions_df: pd.DataFrame, articl
     :return: Customers DataFrame containing new gender enum and gender numerical column
     """
     # Add gender score to articles_df
-    articles_df['gender_score'] = add_gender_scores_to_articles(articles_df)
+    temp_articles_df = articles_df.copy()
+    temp_articles_df['gender_score'] = add_gender_scores_to_articles(articles_df)
 
     # We match transactions to articles based on article_id, adding gender_score
-    transactions_df = transactions_df.merge(articles_df[['article_id', 'gender_score']], on='article_id')
+    temp_transactions_df = transactions_df.merge(temp_articles_df[['article_id', 'gender_score']], on='article_id')
 
     # We create a copy which only has the customer_id and gender_score columns
-    transactions_df_gender = transactions_df[['customer_id', 'gender_score']].copy()
+    transactions_df_gender = temp_transactions_df[['customer_id', 'gender_score']].copy()
 
     # We group by customer_id, and calculate the mean gender_score for each customer
     transactions_df_gender = transactions_df_gender.groupby('customer_id').mean()
 
     # We add the gender_score column and the calculated gender column to the customers_df
-    customers_df = customers_df.merge(transactions_df_gender, on='customer_id')
-    return customers_df['gender_score'].apply(_get_gender_str_for_score)
+    temp_customers_df = customers_df.merge(transactions_df_gender, on='customer_id')
+    return temp_customers_df['gender_score'].apply(_get_gender_str_for_score)
