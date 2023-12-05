@@ -56,7 +56,7 @@ def add_gender(customers_df: pd.DataFrame, transactions_df: pd.DataFrame, articl
     :return: Customers DataFrame containing new gender enum and gender numerical column
     """
     # Add gender score to articles_df
-    articles_df['gender_score'] = _add_gender_scores_to_articles(articles_df)
+    articles_df['gender_score'] = add_gender_scores_to_articles(articles_df)
 
     # We match transactions to articles based on article_id, adding gender_score
     transactions_df = transactions_df.merge(articles_df[['article_id', 'gender_score']], on='article_id')
