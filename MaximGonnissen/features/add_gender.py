@@ -32,7 +32,7 @@ def _get_gender_str_for_score(gender_score: float) -> str:
         return 'f'
 
 
-def _add_gender_scores_to_articles(articles_df: pd.DataFrame) -> pd.DataFrame:
+def add_gender_scores_to_articles(articles_df: pd.DataFrame) -> pd.DataFrame:
     """
     Calculate gender score for each article in articles_df.
 
