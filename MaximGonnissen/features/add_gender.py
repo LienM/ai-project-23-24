@@ -69,6 +69,4 @@ def add_gender(customers_df: pd.DataFrame, transactions_df: pd.DataFrame, articl
 
     # We add the gender_score column and the calculated gender column to the customers_df
     customers_df = customers_df.merge(transactions_df_gender, on='customer_id')
-    customers_df['gender'] = customers_df['gender_score'].apply(_get_gender_str_for_score)
-
-    return customers_df
+    return customers_df['gender_score'].apply(_get_gender_str_for_score)
