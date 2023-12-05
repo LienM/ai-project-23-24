@@ -71,6 +71,64 @@ def not_interacted_with_candidates(t, a, articles_col, k=10):
     return pd.concat(candidates)[['customer_id', 'article_id', 'not_interacted_rank']]
 
 
+def not_interacted_with_candidates_weekly(t, a, articles_col, k):
+    '''
+    Generate candidates for each customer that are the most popular items in categories that customer did not interact with for each week.
+
+    Parameters
+    ----------
+    t : pd.DataFrame
+        Transactions DataFrame.
+    a : pd.DataFrame
+        Articles DataFrame.
+    articles_col : str
+        Name of column in articles DataFrame that contains categories.
+        Column must be present in articles DataFrame.
+    k : int
+        Number of candidates to generate for each customer.
+    
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with columns: customer_id, article_id, week, strategy, not_interacted_weekly_rank.
+    '''
+    group_unique_values = a[articles_col].unique()
+    group_df = pd.merge(t, a[['article_id', articles_col]])
+
+    # Not interacted category for each customer
+    not_interacted_with = group_df\
+    .groupby(['customer_id', 'week'])[articles_col]\
+    .apply(lambda x: np.array(list(set(x))))\
+    .apply(lambda x: np.setdiff1d(group_unique_values, x))
+
+    # Get k most popular articles in given category
+    items_popularity = group_df\
+        .groupby([articles_col, 'week'])['article_id'].value_counts()
+
+    items_popularity = items_popularity[items_popularity > 0]\
+        .groupby(['week', articles_col]).rank(method='dense', ascending=False)\
+        .groupby([articles_col, 'week']).head(k)\
+        .reset_index()\
+        .rename(columns={'count': 'not_interacted_weekly_rank'})\
+        .sort_values(by=['not_interacted_weekly_rank'])
+    
+    # For each candidate-week pair generate top k candidates
+    candidates = []
+    for cid, week in tqdm(not_interacted_with.index.values):
+        groups = not_interacted_with.loc[(cid, week)]
+
+        cid_candidates = items_popularity\
+            [(items_popularity[articles_col].isin(groups)) & (items_popularity.week == week)]\
+            .head(k)\
+            .drop(columns=[articles_col])
+        
+        cid_candidates['customer_id'] = cid
+        cid_candidates['strategy'] = 'niw_{}'.format(articles_col)
+        candidates.append(cid_candidates)
+
+    return pd.concat(candidates)[['customer_id', 'article_id', 'week', 'strategy', 'not_interacted_weekly_rank']]
+
+
 def generate_seasonal_baskets(t, years, months, k, include_rank=False):
     '''
     Generate seasonal baskets for each customer. 
