@@ -1,8 +1,8 @@
 import pandas as pd
 
 
-def most_sold_per_week(transactions: pd.DataFrame, reference_week):
-    """Get the top-12 most sold products per week as potential candidates"""
+def most_sold_per_week(transactions: pd.DataFrame):
+    """For every week, get the top-12 most sold products"""
 
 
     # For every article, get the mean price it was sold for per week

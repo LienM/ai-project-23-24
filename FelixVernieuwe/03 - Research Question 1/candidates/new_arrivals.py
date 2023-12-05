@@ -1,11 +1,9 @@
 import pandas as pd
 
-def candidate_new_arrivals(candidate_customers: pd.DataFrame, ref_week_candidate_customers: pd.DataFrame,
-                           all_transactions: pd.DataFrame, k=5, max_age=0):
+def candidate_new_arrivals(candidate_customers: pd.DataFrame, all_transactions: pd.DataFrame, weekly_purchase_price: pd.DataFrame, k=5, max_age=0):
     """
     For every customer candidate, add the new arrivals of the week as potential candidates
-    :param candidate_customers: Customers that can receive candidates for every week in the training period
-    :param ref_week_candidate_customers: Customers that can receive candidates in the reference week
+    :param candidate_customers: Customers that can receive candidates for every week in given period
     :param all_transactions: Transactions in the entire dataset (used for finding relative age of product)
     :param k: Number of new arrivals to add as candidates
     :param max_age: Maximum age of new arrivals to add as candidates
@@ -31,8 +29,7 @@ def candidate_new_arrivals(candidate_customers: pd.DataFrame, ref_week_candidate
     new_arrivals = new_arrivals.groupby(['week']).head(k)
 
     # For every customer, add the new arrivals of the week as a candidate
-    candidates_training_interval = pd.merge(candidate_customers, new_arrivals, on='week')
-    candidates_reference_week = pd.merge(ref_week_candidate_customers, new_arrivals, on='week')
-    all_candidates = pd.concat([candidates_training_interval, candidates_reference_week])
+    new_arrival_candidates = pd.merge(candidate_customers, new_arrivals, on='week')
+    new_arrival_candidates = new_arrival_candidates.merge(weekly_purchase_price, on=['week', 'article_id'], how='left')
 
-    return all_candidates
+    return new_arrival_candidates
