@@ -9,6 +9,20 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 
+def recall(true, pred):
+    """
+    Calculate the Recall metric for a single user.
+
+    Parameters:
+    true (set): A list of the articles the user has actually read.
+    pred (set): A list of articles the user is predicted to read.
+
+    Returns:
+    float: The Recall@10 for the single user.
+    """
+    return len(true.intersection(pred)) / len(true)
+
+
 def calculate_recall_score(test_week_transactions, predictions_df, k=100):
     y_true = test_week_transactions.groupby('customer_id')['article_id'].apply(list).reset_index()
     y_true.columns = ['customer_id', 'y_true']
