@@ -9,7 +9,7 @@ index_group_name_gender_score_mapping = {
 }
 
 
-def get_gender_score_for_index_group(index_group: str) -> float:
+def _get_gender_score_for_index_group(index_group: str) -> float:
     """
     Get gender score for index group.
     :param index_group: Index group to get gender score for
@@ -18,7 +18,7 @@ def get_gender_score_for_index_group(index_group: str) -> float:
     return index_group_name_gender_score_mapping.get(index_group, 0)
 
 
-def get_gender_str_for_score(gender_score: float) -> str:
+def _get_gender_str_for_score(gender_score: float) -> str:
     """
     Get gender str for gender score. Ranges are [-1, -0.25), [-0.25, 0.25], and (0.25, 1] respectively for m, u, and f.
     :param gender_score: gender score to get gender str for
@@ -32,14 +32,14 @@ def get_gender_str_for_score(gender_score: float) -> str:
         return 'f'
 
 
-def add_gender_scores_to_articles(articles_df: pd.DataFrame) -> pd.DataFrame:
+def _add_gender_scores_to_articles(articles_df: pd.DataFrame) -> pd.DataFrame:
     """
     Calculate gender score for each article in articles_df.
 
     :param articles_df: DataFrame containing article information
     :return: Modified articles_df with a gender score column
     """
-    return articles_df['index_group_name'].apply(get_gender_score_for_index_group)
+    return articles_df['index_group_name'].apply(_get_gender_score_for_index_group)
 
 
 def add_gender(customers_df: pd.DataFrame, transactions_df: pd.DataFrame, articles_df: pd.DataFrame) -> pd.DataFrame:
@@ -56,7 +56,7 @@ def add_gender(customers_df: pd.DataFrame, transactions_df: pd.DataFrame, articl
     :return: Customers DataFrame containing new gender enum and gender numerical column
     """
     # Add gender score to articles_df
-    articles_df['gender_score'] = add_gender_scores_to_articles(articles_df)
+    articles_df['gender_score'] = _add_gender_scores_to_articles(articles_df)
 
     # We match transactions to articles based on article_id, adding gender_score
     transactions_df = transactions_df.merge(articles_df[['article_id', 'gender_score']], on='article_id')
@@ -69,6 +69,6 @@ def add_gender(customers_df: pd.DataFrame, transactions_df: pd.DataFrame, articl
 
     # We add the gender_score column and the calculated gender column to the customers_df
     customers_df = customers_df.merge(transactions_df_gender, on='customer_id')
-    customers_df['gender'] = customers_df['gender_score'].apply(get_gender_str_for_score)
+    customers_df['gender'] = customers_df['gender_score'].apply(_get_gender_str_for_score)
 
     return customers_df
