@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from utils import path
 
-def apk(actual, predicted, k=12):
+def apk(actual, predicted, k):
     """
     source: https://raw.githubusercontent.com/benhamner/Metrics/master/Python/ml_metrics/average_precision.py
 
@@ -24,8 +24,26 @@ def apk(actual, predicted, k=12):
 
     return score / min(len(actual), k)
 
+def recall(actual, predicted, k):
+    """
+    Computes the recall at k.
+    """
+    if len(predicted) > k:
+        predicted = predicted[:k]
 
-def eval_sub_MAP(sub_csv, skip_cust_with_no_purchases=True):
+    num_hits = 0.0
+
+    for i, p in enumerate(predicted):
+        if p in actual:
+            num_hits += 1.0
+
+    if not actual:
+        return 0.0
+
+    return num_hits / min(len(actual), k)
+
+
+def eval_sub(sub_csv, method, skip_cust_with_no_purchases=True, k=12):
     """
     source: Radek
 
@@ -36,10 +54,17 @@ def eval_sub_MAP(sub_csv, skip_cust_with_no_purchases=True):
     sub=pd.read_csv(sub_csv)
     validation_set = pd.read_parquet(f'{path}/validation_ground_truth.parquet')
 
-    apks = []
+    results = []
 
     no_purchases_pattern = []
     for prediction, ground_truth in zip(sub.prediction.str.split(), validation_set.prediction.str.split()):
         if skip_cust_with_no_purchases and (ground_truth == no_purchases_pattern): continue
-        apks.append(apk(ground_truth,ground_truth, k=12))
-    return np.mean(apks)
+        if method == "map":
+            results.append(apk(ground_truth,prediction, k))
+        elif method == "recall":
+            results.append(recall(ground_truth, prediction, k))
+
+    if method == "map":
+        return np.mean(results)
+    elif method == "recall":
+        return np.sum(results) / len(sub)
