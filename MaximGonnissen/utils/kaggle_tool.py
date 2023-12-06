@@ -61,7 +61,9 @@ class KaggleTool:
         if not self.is_authenticated:
             self.api.authenticate()
 
+    @PendingDeprecationWarning
     def get_all_submissions(self, competition: str = None):
+        # TODO: pagination doesn't work? Deprecated for now
         submissions = []
         results = []
         page = 0

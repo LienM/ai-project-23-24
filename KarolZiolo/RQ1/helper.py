@@ -140,7 +140,6 @@ def validate_two_tower_embedded(model, val_dataloader, articles, customers, crit
     val_loss /= len(val_dataloader)
     return val_loss
 
-
 # Define the training function for multi-label classification with validation
 def train_logistic(model, customers, articles, train_dataloader, val_dataloader, criterion, optimizer, save_dir, num_epochs=5):
     model = model
