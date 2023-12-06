@@ -18,7 +18,7 @@ def recall(true, pred):
     pred (set): A list of articles the user is predicted to read.
 
     Returns:
-    float: The Recall@10 for the single user.
+    float: The Recall for the single user.
     """
     return len(true.intersection(pred)) / len(true)
 
