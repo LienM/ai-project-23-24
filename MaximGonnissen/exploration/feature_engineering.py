@@ -33,22 +33,6 @@ def add_month_year_features(df: pd.DataFrame):
     return new_df
 
 
-def add_age_group_feature(df: pd.DataFrame):
-    """
-    Adds age group features to the dataframe, using the age column as origin.
-    :param df: Customers dataframe to add features to.
-    :return: Customers dataframe with added features.
-    """
-    start_time = time.time()
-    print('[ ] Adding age group features to customers dataframe...')
-    new_df = df.copy()
-    new_df['age_group'] = pd.cut(new_df['age'], bins=[0, 20, 30, 40, 60, 100],
-                                 labels=[AgeGroup.YOUNG, AgeGroup.YOUNG_ADULT, AgeGroup.ADULT, AgeGroup.MIDDLE_AGED,
-                                         AgeGroup.OLD])
-    print(f'[X] Added age group features to customers dataframe in {time.time() - start_time:.2f} seconds.')
-    return new_df
-
-
 def get_purchases_for_customer(customer_id: int, transactions: pd.DataFrame):
     """
     Get all purchases for a customer.
@@ -152,12 +136,7 @@ if __name__ == '__main__':
     new_transactions_train.to_csv(export_path / DataFileNames.TRANSACTIONS_TRAIN, index=False)
     print(f'[X] Saved transactions_train in {time.time() - save_time_start:.2f} seconds.')
 
-    new_customers = add_age_group_feature(customers)
-    save_time_start = time.time()
-    new_customers.to_csv(export_path / DataFileNames.CUSTOMERS, index=False)
-    print(f'[X] Saved customers in {time.time() - save_time_start:.2f} seconds.')
-
-    new_customers = add_favourite_colour_feature(new_customers, articles, transactions_train)
+    new_customers = add_favourite_colour_feature(customers, articles, transactions_train)
     save_time_start = time.time()
     new_customers.to_csv(export_path / DataFileNames.CUSTOMERS, index=False)
     print(f'[X] Saved customers in {time.time() - save_time_start:.2f} seconds.')
