@@ -1,0 +1,9 @@
+seaborn
+tqdm
+grpcio
+matplotlib
+pandas
+numpy
+scikit-learn
+pyarrow
+turicreate

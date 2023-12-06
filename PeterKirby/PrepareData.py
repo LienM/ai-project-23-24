@@ -2,7 +2,21 @@ import numpy as np
 import pandas as pd
 
 #prepare_data does all the data preparation stage (from Radek's notebook)
-def prepare_data(kaggle_submission=True):
+def prepare_data(kaggle_submission=True, nr_training_weeks=10):
+    '''
+    Function to prepare the data in the same manner as Radek's notebook
+    Parameters:
+        kaggle_submission (boolean): If true, select training data to include the final week - test data is candidates from final+1 week. If false, training data is taken from weeks up to final-1 - test data is the final week.
+        nr_training_weeks (int): the number of weeks return for training data. Default is 10 (as per Radek's notebook).
+
+    Returns:
+        train (pandas.DataFrame): dataframe of the training data (positive and negative samples)
+        test (pandas.DataFrame): dataframe of the test data (candidates)
+        train_baskets (numpy.array): array of the numbers of samples per training basket (grouped by weeks) 
+        bestsellers_previous_week (pandas.DataFrame): dataframe of candidate bestsellers for the previous week
+          all_transactions[all_transactions.week == test_week]
+
+    '''
 
     #Loading data
 
@@ -13,10 +27,10 @@ def prepare_data(kaggle_submission=True):
 
     if kaggle_submission:
         test_week = all_transactions.week.max() + 1
-        transactions = all_transactions[all_transactions.week > all_transactions.week.max() - 10]
+        transactions = all_transactions[all_transactions.week > all_transactions.week.max() - nr_training_weeks]
     else:
         test_week = all_transactions.week.max()
-        transactions = all_transactions[(all_transactions.week > all_transactions.week.max() - 11) & (all_transactions.week != test_week)]
+        transactions = all_transactions[(all_transactions.week > all_transactions.week.max() - (nr_training_weeks+1)) & (all_transactions.week != test_week)]
 
 
 
@@ -58,7 +72,7 @@ def prepare_data(kaggle_submission=True):
     bestsellers_previous_week.week += 1
 
 
-    bestsellers_previous_week.pipe(lambda df: df[df['week']==96])
+    bestsellers_previous_week.pipe(lambda df: df[df['week']==(test_week-nr_training_weeks)+1])
 
 
     unique_transactions = transactions \

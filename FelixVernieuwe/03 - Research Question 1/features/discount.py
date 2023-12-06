@@ -4,7 +4,12 @@ from matplotlib import ticker
 
 # Percentage of sales within a week that should be discounted to be considered a promotion
 PROMOTION_THRESHOLD = 0.6
+RED_SHADES = ["#FFCDD2", "#EF9A9A", "#E57373", "#EF5350", "#F44336", "#E53935", "#D32F2F", "#C62828", "#B71C1C"]
+GREEN_SHADES = ['#5ae064', '#4cd855', '#3fc346', '#32b737', '#259c28', '#1a8219', '#0d670a', '#005c00', '#005000']
 
+
+sns.set(rc={'figure.figsize': (15, 10)})
+sns.set_style("whitegrid")
 
 def discount_data(transactions: pd.DataFrame, promotion_threshold=PROMOTION_THRESHOLD):
     """
@@ -21,6 +26,20 @@ def discount_data(transactions: pd.DataFrame, promotion_threshold=PROMOTION_THRE
     transactions['has_promotion'] = transactions['discount'] != 0
     promoted_articles = transactions.groupby(['week', 'article_id'])['has_promotion'].mean().reset_index()
     promoted_articles['has_promotion'] = promoted_articles['has_promotion'] >= promotion_threshold
+
+    # Get most common discount per product per week
+    # most_common_discount = transactions[transactions['has_promotion']] \
+    #     .groupby(['week', 'article_id'])['discount'] \
+    #     .agg(lambda x: x.mode().mean())
+    # promoted_articles = promoted_articles.merge(most_common_discount, on=['week', 'article_id'], how='left')
+    # promoted_articles['discount'] = promoted_articles['discount'].fillna(0)
+
+    # Get average discount per product per week
+    average_discount = transactions[transactions['has_promotion']] \
+        .groupby(['week', 'article_id'])['discount'] \
+        .mean()
+    promoted_articles = promoted_articles.merge(average_discount, on=['week', 'article_id'], how='left')
+    promoted_articles['discount'] = promoted_articles['discount'].fillna(0)
 
     return promoted_articles
 
@@ -52,15 +71,28 @@ def plot_product_sales(product, transactions: pd.DataFrame, promoted_articles: p
     product_purchases = transactions[transactions['article_id'] == product]['week'].value_counts().sort_index()
 
     # Gets the discount information per week for the product
-    product_discount = promoted_articles[promoted_articles['article_id'] == product].set_index('week')['has_promotion']
+    product_discount = promoted_articles[promoted_articles['article_id'] == product].set_index('week')[['has_promotion', 'discount']]
     product_purchases = product_purchases.to_frame().join(product_discount).fillna(False)
 
+    product_purchases = product_purchases.reset_index()
+    product_purchases["has_promotion"] = product_purchases["has_promotion"].astype(int).astype(str)
+
+
     # Plots the data, a bar is red if there is no discount, green if there is a discount
-    plot = sns.barplot(x=product_purchases.index, y='week', data=product_purchases, hue='has_promotion',
+    plot = sns.barplot(x='week', y='count', data=product_purchases, hue='has_promotion',
                        palette=['red', 'green'])
+
+    # Fugly way to apply shading on hue (is there a better way?)
+    for bar, (promotion, discount) in zip(plot.patches, product_purchases[['has_promotion', 'discount']].values):
+        if promotion == '1':
+            bar.set_color(GREEN_SHADES[round(discount * 10)])
+        else:
+            bar.set_color(RED_SHADES[round(discount * 10)])
 
     plot.set_xlabel('Week')
     plot.set_ylabel('Sales')
+
+    plot.set_title('Sales of product {} over time'.format(product))
 
     handles, labels = plot.get_legend_handles_labels()
     plot.legend(handles, ['No promo', 'Promotion'])
@@ -71,9 +103,6 @@ def plot_product_sales(product, transactions: pd.DataFrame, promoted_articles: p
 
     plot.xaxis.set_major_locator(ticker.MultipleLocator(4))
     plot = plot.set_xticklabels(plot.get_xticklabels(), rotation=45, horizontalalignment='right')
-
-    plot.legend(title='Discount', loc='upper left', labels=['No discount', 'Discount'])
-
 
 def plot_random_product_sales(transactions: pd.DataFrame, promoted_articles: pd.DataFrame):
     # Sample a random article_id that has more than 1000 transactions

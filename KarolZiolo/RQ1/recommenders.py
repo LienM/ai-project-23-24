@@ -182,7 +182,7 @@ def recommender_logistic(model, customers_n, dataloader_art, targets, restrictio
     else:
         return recommendations
 
-def recommender_two_towers_final(model, dataloader_cust, dataloader_art, targets, restrictions:list, evaluate: bool=False, top_k=5):
+def recommender_two_towers_final(model, dataloader_cust, dataloader_art, targets, restrictions:list, evaluate: bool=False, top_k=5, exclude_already_bought=False):
     mps_device = torch.device("mps")
     model = model.to(mps_device)
     # Generate customers and articles embeddings
@@ -191,25 +191,23 @@ def recommender_two_towers_final(model, dataloader_cust, dataloader_art, targets
     recommendations = torch.zeros((0,top_k))
     with torch.no_grad():
         # push customers through customer tower
-        print("Generate Customer Embeddings...")
-        for customers_features in tqdm(dataloader_cust):
+        for customers_features in dataloader_cust:
             customers_embeddings = model.CustomerTower(customers_features.to_dense().to(mps_device))
             full_customers_embeddings = torch.vstack([full_customers_embeddings, customers_embeddings])
         # push articles through article tower
-        print("Generate Articles Embeddings...")
-        for articles_features in tqdm(dataloader_art):
+        for articles_features in dataloader_art:
             articles_features = model.ArticleTower(articles_features.to_dense().to(mps_device))
             full_articles_embeddings = torch.vstack([full_articles_embeddings, articles_features])
     # calculate probability of being purchased
-    print("Get recommendations...")
     partitions = int(np.ceil(full_customers_embeddings.shape[0]/1000))
     full_articles_embeddings = full_articles_embeddings.to("cpu")
     full_customers_embeddings = full_customers_embeddings.to("cpu")
-    for i in tqdm(range(partitions)):
+    for i in range(partitions):
         customer = full_customers_embeddings[i*1000:(i+1)*1000]
         predictions = nn.sigmoid(customer.matmul(full_articles_embeddings.T))
         # get rid of already bought articles
-        # results = predictions - torch.tensor(targets[i*1000:(i+1)*1000].todense())
+        if exclude_already_bought:
+            predictions = predictions - torch.tensor(targets[i*1000:(i+1)*1000].todense())
         # apply mask for products that are currently selling
         for restriction in restrictions:
             mask_matrix = torch.zeros((1,full_articles_embeddings.shape[0]))
@@ -231,7 +229,7 @@ def recommender_two_towers_final(model, dataloader_cust, dataloader_art, targets
     else:
         return recommendations
 
-def recommender_two_towers_customer(model, dataloader_cust, dataloader_art, targets, restrictions:list, evaluate: bool=False, top_k=5):
+def recommender_two_towers_customer(model, dataloader_cust, dataloader_art, targets, restrictions:list, evaluate: bool=False, top_k=5, exclude_already_bought=False):
     mps_device = torch.device("mps")
     model = model.to(mps_device)
     # Generate customers and articles embeddings
@@ -240,25 +238,23 @@ def recommender_two_towers_customer(model, dataloader_cust, dataloader_art, targ
     recommendations = torch.zeros((0,top_k))
     with torch.no_grad():
         # push customers through customer tower
-        print("Generate Customer Embeddings...")
-        for customers_features in tqdm(dataloader_cust):
+        for customers_features in dataloader_cust:
             customers_embeddings = model.CustomerTower(customers_features.to_dense().to(mps_device))
             full_customers_embeddings = torch.vstack([full_customers_embeddings, customers_embeddings])
         # push articles through article tower
-        print("Generate Articles Embeddings...")
-        for articles_features in tqdm(dataloader_art):
+        for articles_features in dataloader_art:
             articles_features = model.ArticleTower(articles_features.to_dense().to(mps_device))
             full_articles_embeddings = torch.vstack([full_articles_embeddings, articles_features])
     # calculate probability of being purchased
-    print("Get recommendations...")
     partitions = int(np.ceil(full_customers_embeddings.shape[0]/1000))
     full_articles_embeddings = full_articles_embeddings.to("cpu")
     full_customers_embeddings = full_customers_embeddings.to("cpu")
-    for i in tqdm(range(partitions)):
+    for i in range(partitions):
         customer = full_customers_embeddings[i*1000:(i+1)*1000]
         predictions = nn.sigmoid(customer.matmul(full_articles_embeddings.T))
         # get rid of already bought articles
-        # results = predictions - torch.tensor(targets[i*1000:(i+1)*1000].todense())
+        if exclude_already_bought:
+            results = predictions - torch.tensor(targets[i*1000:(i+1)*1000].todense())
         # apply mask for products that are currently selling
         for restriction in restrictions:
             mask_matrix = torch.zeros((1,full_articles_embeddings.shape[0]))
