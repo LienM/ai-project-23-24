@@ -12,23 +12,34 @@ def rank():
     test_week = 105
     reduction_size = 700
     embeddings = "data/embeddings/text_embeddings_plain.parquet"
-    index = f"data/indices/text_index_{reduction_size}.joblib"
+    index = f"data/indices/text_index_{reduction_size}.ann"
     ranker = EmbeddingRanker(test_week, embeddings, index, reduction_size=reduction_size)
-    predictions = ranker.rank()
+    predictions = ranker.rank("add_popular")
     predictions.to_csv("submissions/text.csv.gz", index=False)
 
 def evaluate():
-    predictions = pandas.read_csv("sub1.csv.gz")
-    transactions = pandas.read_parquet("warmup/transactions_train.parquet")
+    test_week = 104
+    predictions = pandas.read_csv("submissions/baseline.csv.gz")
+    transactions = pandas.read_parquet("data/baseline/transactions_train.parquet")
     predictions["customer_id"] = customer_hex_id_to_int(predictions["customer_id"])
     predictions["prediction"] = predictions["prediction"].apply(lambda prediction: [int(article_id) for article_id in prediction.split(" ")])
-    purchases = get_purchases(transactions)
+    purchases = get_purchases(transactions[transactions.week == test_week])
     print(mean_average_precision(predictions, purchases))
+
+def average_bestseller():
+    test_week = 105
+    transactions = pandas.read_parquet("data/baseline/transactions_train.parquet")
+    popular_data = transactions[transactions.week == test_week - 1] \
+                .reset_index(drop=True) \
+                .groupby("week")["article_id"].value_counts() \
+                .groupby("week").rank(method="dense", ascending=False) \
+                .groupby("week").head(25).rename('bestseller_rank').astype('int8') \
+                .to_frame().reset_index(names=["week", "article_id"])
 
 @logger.catch
 def main():
     # create_image_embeddings("data/images.nosync", "data/embeddings/image_embeddings.parquet")
-    # create_text_embeddings("data/article.csv", "data/embeddings/text_embeddings_plain.parquet", template="plain")
+    # create_text_embeddings("data/articles.csv", "data/embeddings/text_embeddings_plain.parquet", template="plain")
     # concatenate_embeddings("data/embeddings/text_embeddings_plain.parquet", "data/embeddings/image_embeddings.parquet", "data/embeddings/concatenated_embeddings.parquet")
 
     rank()
