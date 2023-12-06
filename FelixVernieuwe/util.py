@@ -8,8 +8,14 @@ import kaggle
 
 
 def load_image(article_id):
-    return mpimg.imread('../data/images/{}/{}.jpg'.format(article_id[:3], article_id))
+    return mpimg.imread('../../data/images/{}/{}.jpg'.format(article_id[:3], article_id))
 
+
+def display_product(article_id):
+    image = load_image(article_id)
+    plt.imshow(image)
+    plt.axis('off')
+    plt.show()
 
 def display_images(images):
     fig, ax = plt.subplots(1, len(images), figsize=(20, 20))

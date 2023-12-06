@@ -39,3 +39,14 @@ def most_sold_per_week(transactions: pd.DataFrame):
 
     # End result: top-12 best ranked articles per week in transaction-format (to be merged with customer)
     return most_sold_products_per_week_ranked
+
+def most_sold_all_time(transactions: pd.DataFrame):
+    """Get the most sold products all time"""
+
+    # Rank the articles based on the amount of times they have been purchased
+    most_purchased_articles = transactions.groupby('article_id').size().sort_values(ascending=False)
+    most_purchased_articles = most_purchased_articles.reset_index()
+    most_purchased_articles['all_time_rank'] = most_purchased_articles.index + 1
+    most_purchased_articles = most_purchased_articles.drop(columns=0)
+
+    return most_purchased_articles
