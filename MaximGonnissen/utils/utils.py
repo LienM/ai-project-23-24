@@ -29,6 +29,24 @@ class DataFileNames:
     FEATURE_ENGINEERING_DIR = 'feature_engineering'
     ZIP_DIR = 'zips'
 
+    @staticmethod
+    def as_parquet(path: pathlib.Path) -> pathlib.Path:
+        """
+        Get the path to the parquet file.
+        :param path: Path to the csv file.
+        :return: Path to the parquet file.
+        """
+        return path.with_suffix('.parquet')
+
+    @staticmethod
+    def as_csv(path: pathlib.Path) -> pathlib.Path:
+        """
+        Get the path to the csv file.
+        :param path: Path to the parquet file.
+        :return: Path to the csv file.
+        """
+        return path.with_suffix('.csv')
+
 
 def get_data_path() -> pathlib.Path:
     """
@@ -48,12 +66,16 @@ def load_data(path: pathlib.Path, verbose: bool = True, **kwargs) -> pd.DataFram
     """
     Load data from a csv file, measuring the time it takes to load.
     :param path: Path to the csv file.
+    :param verbose: Whether to print information about the loading process.
     :return: Dataframe containing the data from the csv file.
     """
     time_start = time.time()
     if verbose:
         print(f'[ ] Loading data from {path}...')
-    df = pd.read_csv(path, **kwargs)
+    if path.suffix == '.parquet':
+        df = pd.read_parquet(path)
+    else:
+        df = pd.read_csv(path, **kwargs)
     if verbose:
         print(f'[X] Loaded data from {path} in {time.time() - time_start:.2f} seconds.')
     return df
@@ -64,6 +86,7 @@ def load_data_from_hnm(path: pathlib.Path, verbose: bool = True, **kwargs) -> pd
     Load data from a csv file in the h-and-m-personalized-fashion-recommendations folder,
     measuring the time it takes to load.
     :param path: Path to the csv file.
+    :param verbose: Whether to print information about the loading process.
     :return: Dataframe containing the data from the csv file.
     """
     return load_data(get_data_path() / DataFileNames.HNM_DIR / path, verbose, **kwargs)

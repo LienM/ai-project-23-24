@@ -1,4 +1,5 @@
 import numpy as np
+import numpy as np
 
 def apk(actual, predicted, k=10):
     """
@@ -43,12 +44,12 @@ def mapk(actual, predicted, k=10):
     Computes the mean average precision at k.
 
     This function computes the mean average prescision at k between two lists
-    of lists of items.
+    of items.
 
     Parameters
     ----------
     actual : list
-             A list of lists of elements that are to be predicted 
+             A list of lists of elements that are to be predicted
              (order doesn't matter in the lists)
     predicted : list
                 A list of lists of predicted elements
@@ -63,3 +64,12 @@ def mapk(actual, predicted, k=10):
 
     """
     return np.mean([apk(a,p,k) for a,p in zip(actual, predicted)])
+
+def calculate_apk(list_of_preds, list_of_gts):
+    # for fast validation this can be changed to operate on dicts of {'cust_id_int': [art_id_int, ...]}
+    # using 'data/val_week_purchases_by_cust.pkl'
+    apks = []
+    for preds, gt in zip(list_of_preds, list_of_gts):
+        apks.append(apk(gt, preds, k=12))
+    return np.mean(apks)
+
