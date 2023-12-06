@@ -1,5 +1,6 @@
 data/
 *.pt
 *.gz
+*.pkl
 *.zip
 *.bin
