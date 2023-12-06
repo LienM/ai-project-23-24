@@ -73,7 +73,7 @@ def load_data(path: pathlib.Path, verbose: bool = True, **kwargs) -> pd.DataFram
     if verbose:
         print(f'[ ] Loading data from {path}...')
     if path.suffix == '.parquet':
-        df = pd.read_parquet(path, **kwargs)
+        df = pd.read_parquet(path)
     else:
         df = pd.read_csv(path, **kwargs)
     if verbose:
