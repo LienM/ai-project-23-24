@@ -100,9 +100,17 @@ def candidates_popularity(baskets, train_data, k=3, d=1):
     """
 
     def get_popular(df):
-        return df.article_id.value_counts().head(k).index.to_frame("article_id")
+        return (
+            df.drop_duplicates(["customer_id", "article_id"])
+            .article_id.value_counts()
+            .rank(method="dense", ascending=False)
+            .head(k)
+            .astype(int)
+            .to_frame("rank")
+            .reset_index()
+        )
 
-    pops = by_week(baskets.week.unique(), train_data, d, get_popular)
+    pops = by_week(baskets.week.unique(), train_data, d, get_popular, False)
 
     return pd.merge(baskets, pops, on=["week"])
 
@@ -114,9 +122,9 @@ def candidates_repurchase(baskets, train_data, d=1, relative=True):
     """
 
     def get_repurchased(df):
-        return df.drop_duplicates(["customer_id", "article_id"])[
+        return df.sort_values(by="t_dat", ascending=False).drop_duplicates(
             ["customer_id", "article_id"]
-        ]
+        )[["customer_id", "article_id"]]
 
     rep = by_week(baskets.week.unique(), train_data, d, get_repurchased, relative)
 
@@ -249,12 +257,9 @@ def candidates_gpt4rec(baskets, train_data, articles, d=1, k=3, relative=True):
 
 
 # popular k1 items (previous l1 weeks), within group of similar customers (customer feature)
-def candidates_customer_feature(
-    baskets, train_data, customers, feature, k=3, d=1, relative=False
-):
+def candidates_customer_feature(baskets, train_data, customers, feature, k=3, d=1):
     """
     Generate candidates for each basket (customer, week) by taking the k most popular items in the previous d weeks within the group of customers that match on the given feature.
-    If relative is True, only look in the d previous weeks that the customer bought something
     """
 
     tt = pd.merge(train_data, customers, how="left", on="customer_id")[
@@ -266,17 +271,20 @@ def candidates_customer_feature(
 
     def get_popular_by_feature(df):
         return (
-            df.groupby(feature, observed=False, as_index=False)
+            df.groupby(feature, observed=False)
             .article_id.value_counts()
             .groupby(feature, observed=False)
-            .head(k)[[feature, "article_id"]]
+            .rank(method="dense", ascending=False)
+            .astype(int)
+            .to_frame("rank")
+            .groupby(feature, observed=False)
+            .head(k)
+            .reset_index()
         )
 
-    pops = by_week(baskets.week.unique(), tt, d, get_popular_by_feature, relative)
+    pops = by_week(baskets.week.unique(), tt, d, get_popular_by_feature, False)
 
-    return pd.merge(bb, pops, on=["week", feature])[
-        ["customer_id", "week", "article_id"]
-    ]
+    return pd.merge(bb, pops, on=["week", feature]).drop(columns=feature)
 
 
 def candidates_article_feature(
@@ -284,12 +292,11 @@ def candidates_article_feature(
     train_data,
     articles,
     feature,
-    k1=3,
-    k2=1,
-    d1=1,
-    d2=1,
-    rel1=False,
-    rel2=True,
+    k1,
+    d1,
+    k2,
+    d2,
+    rel2,
 ):
     """
     Generate candidates for each basket (customer, week)
@@ -303,10 +310,15 @@ def candidates_article_feature(
 
     def get_popular_by_feature(df):
         return (
-            df.groupby(feature, observed=False, as_index=False)
+            df.groupby(feature, observed=False)
             .article_id.value_counts()
             .groupby(feature, observed=False)
-            .head(k1)[[feature, "article_id"]]
+            .rank(method="dense", ascending=False)
+            .astype(int)
+            .to_frame("rank")
+            .groupby(feature, observed=False)
+            .head(k1)
+            .reset_index()
         )
 
     def get_common_features(df):
@@ -317,52 +329,141 @@ def candidates_article_feature(
             .head(k2)[["customer_id", feature]]
         )
 
-    pops = by_week(baskets.week.unique(), tt, d1, get_popular_by_feature, rel1)
+    pops = by_week(baskets.week.unique(), tt, d1, get_popular_by_feature, False)
     hists = by_week(baskets.week.unique(), tt, d2, get_common_features, rel2)
     histories = pd.merge(hists, baskets, on=["customer_id", "week"])
 
-    return pd.merge(histories, pops, on=["week", feature])[
-        ["customer_id", "week", "article_id"]
-    ]
+    return pd.merge(histories, pops, on=["week", feature]).drop(columns=feature)
+
+
+def candidate_article_similarity(
+    baskets, train_data, article_similarities, k_sim, k, d, rel
+):
+    """
+    Generate candidates for each basket (customer, week)
+    by taking the k most common items in the customer's history in the previous d weeks
+    for each of those items, take the k_sim most similar items according to article_similarities.
+    If rel is True, only look in the d previous weeks that the customer bought something
+    """
+
+    def get_history(df):
+        return (
+            df.groupby("customer_id", as_index=False)
+            .article_id.value_counts()
+            .groupby("customer_id")
+            .head(k)[["customer_id", "article_id"]]
+        )
+
+    histories = by_week(baskets.week.unique(), train_data, d, get_history, rel)
+    histories = pd.merge(histories, baskets, on=["customer_id", "week"])
+    articles = article_similarities.groupby("article_id").head(k_sim)
+
+    return (
+        pd.merge(histories, articles, on="article_id")
+        .drop(columns=["article_id", "score"])
+        .rename(columns={"similar_article_id": "article_id"})
+    )
+
+
+def add_indicator_features(df, label):
+    df["indicator"] = label
+    return df
 
 
 def generate_candidates(train_data, test_week, test_customers, c, a):
-    num_weeks_spare = 5
+    # no canidates for the first third of the training data because canidates depend on a couple of weeks of history
+    num_weeks_spare = (test_week - train_data.week.min()) // 3
 
     b = baskets(train_data, test_week, test_customers)
     b = b[b.week >= test_week - num_weeks_spare]
 
     candidates = [
-        candidates_repurchase(b, train_data, 5),
-        candidates_article_feature(b, train_data, a, "prod_name", 10, 20, 3, 5),
-        candidates_customer_feature(b, train_data, c, "postal_code", 10, 2),
-        candidates_customer_feature(b, train_data, c, "age", 10, 2),
+        add_indicator_features(
+            candidates_popularity(b, train_data, 12, 1), "c_popularity1"
+        ),
+        add_indicator_features(
+            candidates_popularity(b, train_data, 5, 3), "c_popularity2"
+        ),
+        add_indicator_features(
+            candidates_repurchase(b, train_data, 3, True), "c_repurchase"
+        ),
+        add_indicator_features(
+            candidates_article_feature(
+                b, train_data, a, "product_code", 10, 1, 5, 5, True
+            ),
+            "c_af_prod_code",
+        ),
+        add_indicator_features(
+            candidates_article_feature(
+                b, train_data, a, "department_name", 10, 1, 5, 5, True
+            ),
+            "c_af_department_name",
+        ),
+        add_indicator_features(
+            candidates_article_feature(
+                b, train_data, a, "colour_group_name", 10, 1, 5, 5, True
+            ),
+            "c_af_colour_group_name",
+        ),
+        add_indicator_features(
+            candidates_customer_feature(b, train_data, c, "postal_code", 10, 2),
+            "c_cf_postal_code",
+        ),
+        add_indicator_features(
+            candidates_customer_feature(b, train_data, c, "age", 10, 2),
+            "c_cf_age",
+        ),
+        add_indicator_features(
+            candidates_customer_feature(b, train_data, c, "FN", 10, 2), "c_cf_FN"
+        ),
     ]
 
-    result = pd.concat(candidates).drop_duplicates(
-        ["customer_id", "week", "article_id"]
-    )
+    result = pd.concat(candidates)
+
     return result[result.week >= test_week - num_weeks_spare]
 
 
 def get_examples_candidates(train_data, test_week, test_customers, c, a):
     candidates = generate_candidates(train_data, test_week, test_customers, c, a)
+    candidates.reset_index(drop=True, inplace=True)
+    candidates = candidates.join(pd.get_dummies(candidates.indicator)).drop(
+        columns="indicator"
+    )
 
     # create training examples by taking ground truth data (positive examples) and adding the candidates (negative examples) for non-test weeks
     actual = train_data.copy()[["week", "customer_id", "article_id"]]
-    actual = actual[actual.week.isin(candidates.week.unique())]
     actual["purchased"] = True
+
     train_examples = pd.concat([actual, candidates[candidates.week != test_week]])
-    train_examples.purchased.fillna(False, inplace=True)
-    train_examples.drop_duplicates(
-        ["customer_id", "article_id", "week"], keep="first", inplace=True
+    train_examples["purchased"].fillna(False, inplace=True)
+
+    train_examples_a = (
+        train_examples.groupby(["customer_id", "week", "article_id"], as_index=False)
+        .any()
+        .drop(columns="rank")
+    )
+    train_examples_b = train_examples.groupby(
+        ["customer_id", "week", "article_id"], as_index=False
+    )["rank"].min()
+    train_examples = pd.merge(
+        train_examples_a, train_examples_b, on=["customer_id", "week", "article_id"]
     )
     train_examples.sort_values(["customer_id", "week"], inplace=True)
     train_examples.reset_index(drop=True, inplace=True)
 
     # create testing candidates by filtering on test week
     test_candidates = candidates[candidates.week == test_week].drop(columns="week")
-    test_candidates.drop_duplicates(["customer_id", "article_id"], inplace=True)
+    test_candidates_a = (
+        test_candidates.groupby(["customer_id", "article_id"], as_index=False)
+        .any()
+        .drop(columns="rank")
+    )
+    test_candidates_b = test_candidates.groupby(
+        ["customer_id", "article_id"], as_index=False
+    )["rank"].min()
+    test_candidates = pd.merge(
+        test_candidates_a, test_candidates_b, on=["customer_id", "article_id"]
+    )
     test_candidates.sort_values("customer_id", inplace=True)
     test_candidates.reset_index(drop=True, inplace=True)
 
@@ -370,27 +471,26 @@ def get_examples_candidates(train_data, test_week, test_customers, c, a):
 
 
 def add_features(data, t, c, a):
-    columns_to_use = [
-        # "article_id",
-        "product_type_no",
-        "graphical_appearance_no",
-        "colour_group_code",
-        "perceived_colour_value_id",
-        "perceived_colour_master_id",
-        "department_no",
-        "index_code",
-        "index_group_no",
-        "section_no",
-        "garment_group_no",
-        "FN",
-        "Active",
-        "club_member_status",
-        "fashion_news_frequency",
-        "age",
-        "postal_code",
-        "preferred_price",
-        "article_price",
-        "buys_for_kids",
+    columns_to_exclude = [
+        "rank",
+        "week",
+        "purchased",
+        "customer_id",
+        "article_id",
+        "colour_group_name",
+        "department_name",
+        "detail_desc",
+        "garment_group_name",
+        "graphical_appearance_name",
+        "index_group_name",
+        "index_name",
+        "perceived_colour_master_name",
+        "perceived_colour_value_name",
+        "prod_name",
+        "product_code",
+        "product_group_name",
+        "product_type_name",
+        "section_name",
     ]
 
     result = data
@@ -416,4 +516,4 @@ def add_features(data, t, c, a):
     result = pd.merge(result, article_max_price, on="article_id", how="left")
     result = pd.merge(result, buys_for_kids, on="customer_id", how="left")
 
-    return result[columns_to_use]
+    return result.drop(columns=columns_to_exclude, errors="ignore")

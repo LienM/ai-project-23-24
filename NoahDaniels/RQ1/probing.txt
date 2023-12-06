@@ -1,0 +1,17 @@
+(0.00748, 0.00738) top 12 last week
+active customers: (0.00520, 0.00496)
+  cold customers: (0.00228, 0.00242)
+
+(0.00675, 0.00702) c_cf_age top 12 last week + top 12 last week  
+active customers: (0.00424, 0.00463)
+  cold customers: (0.00250, 0.00239)
+
+(0.02203, 0.02157) repurchase 4 weeks + top 12 last week
+active customers: (0.01974, 0.01915)
+  cold customers: (0.00228, 0.00242)
+
+(0.02230, 0.02273) 05-12e
+active customers: (0.02064, 0.02007)
+  cold customers: (0.00208, 0.00222)
+
+
