@@ -247,6 +247,7 @@ def get_evaluation_plots(test, pred_cols, test_week_transactions, bestsellers_pr
         plt.xlabel("k")
         plt.title(f"MAPK of predictions (all customers)")
         plt.legend()
+        plt.grid(True, which="major", axis="y", alpha=0.5)
         plt.show()
 
         plt.figure(figsize=size)
@@ -256,6 +257,7 @@ def get_evaluation_plots(test, pred_cols, test_week_transactions, bestsellers_pr
         plt.xlabel("k")
         plt.title(f"MAPK of predictions (only purchasing customers)")
         plt.legend()
+        plt.grid(True, which="major", axis="y", alpha=0.5)
         plt.show()
 
 
@@ -266,6 +268,7 @@ def get_evaluation_plots(test, pred_cols, test_week_transactions, bestsellers_pr
         plt.xlabel("Ranking Method")
         plt.title(f"MRR of predictions (all customers)")
         plt.xticks(rotation=45)
+        plt.grid(True, which="major", axis="y", alpha=0.5)
         plt.show()
 
 
@@ -276,6 +279,7 @@ def get_evaluation_plots(test, pred_cols, test_week_transactions, bestsellers_pr
         plt.xlabel("Ranking Method")
         plt.title(f"MRR of predictions (only purchasing customers)")
         plt.xticks(rotation=45)
+        plt.grid(True, which="major", axis="y", alpha=0.5)
         plt.show()
 
 
@@ -289,6 +293,7 @@ def get_evaluation_plots(test, pred_cols, test_week_transactions, bestsellers_pr
         plt.xlabel("Recall (avg. across customers)")
         plt.title(f"Precision-Recall curve up to k=12 (only customers who bought >= k items)")
         plt.legend()
+        plt.grid(True, which="major", axis="y", alpha=0.5)
         plt.show()
 
 
@@ -300,6 +305,7 @@ def get_evaluation_plots(test, pred_cols, test_week_transactions, bestsellers_pr
         plt.xlabel("k")
         plt.title(f"Precision@k (only customers who bought >= k items)")
         plt.legend()
+        plt.grid(True, which="major", axis="y", alpha=0.5)
         plt.show()
 
 
@@ -311,6 +317,7 @@ def get_evaluation_plots(test, pred_cols, test_week_transactions, bestsellers_pr
         plt.xlabel("k")
         plt.title(f"Recall@k (only customers who bought >= k items)")
         plt.legend()
+        plt.grid(True, which="major", axis="y", alpha=0.5)
         plt.show()
 
 
