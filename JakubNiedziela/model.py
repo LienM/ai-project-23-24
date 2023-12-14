@@ -3,6 +3,7 @@ import numpy as np
 import json
 import os
 from lightgbm import LGBMRanker
+import gc
 
 
 def prepare_data(t_df, bestsellers_prev_week, candidates, features, cols_to_use, test_week=105):
@@ -42,6 +43,9 @@ def prepare_data(t_df, bestsellers_prev_week, candidates, features, cols_to_use,
     data.purchased.fillna(0, inplace=True)
     data.drop_duplicates(['customer_id', 'article_id', 'week'], inplace=True)
 
+    del t_df, candidates
+    gc.collect()
+
     print('Percentage of real transactions: ', data.purchased.mean())
 
     model_data = pd.merge(
@@ -50,6 +54,8 @@ def prepare_data(t_df, bestsellers_prev_week, candidates, features, cols_to_use,
         on=['week', 'article_id'],
         how='left'
     )
+    del data, bestsellers_prev_week
+    gc.collect()
 
     # Remove first week of data, as we don't have bestseller rank for it
     # (week was shifted by one) and fill missing values with 999 -- really bad rank
@@ -90,6 +96,9 @@ def prepare_data(t_df, bestsellers_prev_week, candidates, features, cols_to_use,
                 on='customer_id', 
                 how='left'
             )
+
+    del features
+    gc.collect()
     
     print('Done.')
     print('Sorting data...')
@@ -101,6 +110,10 @@ def prepare_data(t_df, bestsellers_prev_week, candidates, features, cols_to_use,
     test = model_data[model_data.week == test_week]\
         .drop_duplicates(['customer_id', 'article_id', 'sales_channel_id'])\
         .copy()
+    
+    del model_data
+    gc.collect()
+    
     # Basically how many purchased for each customer week pair -- so lgbm knows its one transaction
     train_baskets = train.groupby(['week', 'customer_id'])['article_id']\
         .count()\
