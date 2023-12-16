@@ -6,7 +6,7 @@ from lightgbm import LGBMRanker
 import gc
 
 
-def prepare_data(t_df, bestsellers_prev_week, candidates, features, cols_to_use, test_week=105):
+def prepare_data(t_df, candidates, features, cols_to_use, test_week=105, bestsellers_prev_week=None):
     '''
     Prepare data for training.
 
@@ -48,13 +48,19 @@ def prepare_data(t_df, bestsellers_prev_week, candidates, features, cols_to_use,
 
     print('Percentage of real transactions: ', data.purchased.mean())
 
-    model_data = pd.merge(
-        data,
-        bestsellers_prev_week[['week', 'article_id', 'bestseller_rank']],
-        on=['week', 'article_id'],
-        how='left'
-    )
-    del data, bestsellers_prev_week
+    if bestsellers_prev_week is not None:
+        model_data = pd.merge(
+            data,
+            bestsellers_prev_week[['week', 'article_id', 'bestseller_rank']],
+            on=['week', 'article_id'],
+            how='left'
+        )
+        del bestsellers_prev_week
+        gc.collect()
+    else:
+        model_data = data.copy()
+
+    del data
     gc.collect()
 
     # Remove first week of data, as we don't have bestseller rank for it
