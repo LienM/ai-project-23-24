@@ -20,7 +20,7 @@ def get_most_popular_gendered_items(articles_df: pd.DataFrame, transactions_df: 
     if "popularity" not in temp_articles_df.columns:
         temp_articles_df['popularity'] = add_article_popularity(temp_articles_df, transactions_df)
 
-    male_top = temp_articles_df.sort_values(by=['popularity', 'gender_score'], ascending=[True, False]).head(item_amount)['article_id'].tolist()
-    female_top = temp_articles_df.sort_values(by=['popularity', 'gender_score'], ascending=[True, True]).head(item_amount)['article_id'].tolist()
+    male_top = temp_articles_df.sort_values(by=['gender_score', 'popularity'], ascending=[False, True]).head(item_amount)['article_id'].tolist()
+    female_top = temp_articles_df.sort_values(by=['gender_score', 'popularity'], ascending=[True, True]).head(item_amount)['article_id'].tolist()
 
     return male_top, female_top
