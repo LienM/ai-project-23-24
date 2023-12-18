@@ -3,9 +3,9 @@ import pandas as pd
 from features.add_article_total_sales import add_article_total_sales
 
 
-def add_article_popularity(articles_df: pd.DataFrame, transactions_df: pd.DataFrame):
+def add_article_total_sales_popularity(articles_df: pd.DataFrame, transactions_df: pd.DataFrame):
     """
-    Calculates the popularity of each article. (E.g. 1st most popular, 2nd most popular, etc.)
+    Calculates the total sales popularity of each article. (E.g. 1st most sold, 2nd most sold, etc.)
     :param articles_df: The articles dataframe.
     :param transactions_df: The transactions dataframe.
     :return: A column with the popularity of each article.
