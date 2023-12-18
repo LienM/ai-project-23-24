@@ -57,7 +57,8 @@ def add_gender(customers_df: pd.DataFrame, transactions_df: pd.DataFrame, articl
     """
     # Add gender score to articles_df
     temp_articles_df = articles_df.copy()
-    temp_articles_df['gender_score'] = add_gender_scores_to_articles(articles_df)
+    if 'gender_score' not in temp_articles_df.columns:
+        temp_articles_df['gender_score'] = add_gender_scores_to_articles(articles_df)
 
     # We match transactions to articles based on article_id, adding gender_score
     temp_transactions_df = transactions_df.merge(temp_articles_df[['article_id', 'gender_score']], on='article_id')
