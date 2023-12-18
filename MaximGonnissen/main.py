@@ -1,14 +1,13 @@
 import multiprocessing as mp
+import zipfile
+from io import BytesIO
 
 from analysis.seasonality_analysis import run_seasonal_analysis_parallel, run_seasonal_analysis
+from features.add_gender import add_gender
 from pruning.prune_outdated_items import prune_outdated_items
 from selection.get_most_popular_gendered_items import get_most_popular_gendered_items
-from utils.utils import load_data_from_hnm, DataFileNames, get_data_path
 from utils.convert_to_parquet import convert_to_parquet
-from features.add_gender import add_gender
-
-from io import BytesIO
-import zipfile
+from utils.utils import load_data_from_hnm, DataFileNames, get_data_path
 
 
 def get_seasonality_combinations():
@@ -35,23 +34,26 @@ def seasonal_analysis():
 
 
 def generate_gender_recommendations():
-    articles_df = load_data_from_hnm(DataFileNames.ARTICLES.replace('.csv', '.parquet'), True, dtype={'article_id': str})
-    transactions_df = load_data_from_hnm(DataFileNames.TRANSACTIONS_TRAIN.replace('.csv', '.parquet'), True, dtype={'article_id': str})
+    articles_df = load_data_from_hnm(DataFileNames.ARTICLES.replace('.csv', '.parquet'), True,
+                                     dtype={'article_id': str})
+    transactions_df = load_data_from_hnm(DataFileNames.TRANSACTIONS_TRAIN.replace('.csv', '.parquet'), True,
+                                         dtype={'article_id': str})
     sample_submission_df = load_data_from_hnm(DataFileNames.SAMPLE_SUBMISSION.replace('.csv', '.parquet'))
     customers_df = load_data_from_hnm(DataFileNames.CUSTOMERS.replace('.csv', '.parquet'))
 
     customers_df['gender'] = add_gender(customers_df, transactions_df, articles_df)
 
-    articles_df, transactions_df = prune_outdated_items(articles_df, transactions_df)
+    articles_df, transactions_df = prune_outdated_items(articles_df, transactions_df, cutoff_days=365)
 
-    most_popular_m_items = get_most_popular_gendered_items(articles_df, True)
-    most_popular_f_items = get_most_popular_gendered_items(articles_df, False)
+    most_popular_m_items, most_popular_f_items = get_most_popular_gendered_items(articles_df, transactions_df)
 
     submission_df = sample_submission_df.copy()
 
     submission_df = submission_df.merge(customers_df[['customer_id', 'gender']], on='customer_id')
+
     submission_df.loc[submission_df.gender == 'm', 'prediction'] = " ".join(most_popular_m_items)
-    submission_df.loc[submission_df.gender == 'u', 'prediction'] = " ".join(most_popular_m_items)
+    submission_df.loc[submission_df.gender == 'u', 'prediction'] = " ".join(
+        most_popular_m_items[:6] + most_popular_f_items[:6])
     submission_df.loc[submission_df.gender == 'f', 'prediction'] = " ".join(most_popular_f_items)
 
     submission_df.drop('gender', axis=1, inplace=True)
@@ -76,4 +78,4 @@ def convert_all_to_parquet():
 
 
 if __name__ == '__main__':
-    pass
+    generate_gender_recommendations()
