@@ -2,7 +2,7 @@ import multiprocessing as mp
 
 from analysis.seasonality_analysis import run_seasonal_analysis_parallel, run_seasonal_analysis
 from pruning.prune_outdated_items import prune_outdated_items
-from selectors.get_most_popular_gendered_items import get_most_popular_gendered_items
+from selection.get_most_popular_gendered_items import get_most_popular_gendered_items
 from utils.utils import load_data_from_hnm, DataFileNames, get_data_path
 from utils.convert_to_parquet import convert_to_parquet
 from features.add_gender import add_gender
