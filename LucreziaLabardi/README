@@ -1,1 +1,20 @@
+Expanation of files and folders
 
+1. EDA
+Files with data exploration (1 assignment) of the three datasets
+
+2. FeatureEngineering
+Files with feature engineering (2 assignment). 
+None of the feature found here were used for the final research question(s)
+
+3. FindFabric
+Files with the code that was used to find the fabric and material infromation.
+- Finding_fabric_text_mining has the code of the text mining techniques developed in a first phase
+- Finding_fabric_with_lexnames has the code that was used to generate the fabric words for the final rq1
+
+4. FinalResearchQuestions
+Files with the code of the classification experiments, training and test weeks are shown in the name
+- Candidates_style_train102103_test104 is the main experiment, with the hyperparameters tuning and the main generation of train and test set. All the other files apply the same methodology on different periods of time
+- Candidates_style-metrics@100 has the code of the metrics computed at 100 after candidates generation
+
+generated_data is a folder with the four different articles dataset generated after finding the fabric. All of them were tested separatedly within Radek's code
