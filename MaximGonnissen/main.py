@@ -52,10 +52,9 @@ def generate_gender_recommendations():
 
     submission_df = submission_df.merge(customers_df[['customer_id', 'gender']], on='customer_id')
 
-    submission_df.loc[submission_df.gender == 'm', 'prediction'] = " ".join(most_popular_m_items)
-    submission_df.loc[submission_df.gender == 'u', 'prediction'] = " ".join(
-        most_popular_m_items[:6] + most_popular_f_items[:6])
-    submission_df.loc[submission_df.gender == 'f', 'prediction'] = " ".join(most_popular_f_items)
+    submission_df.loc[submission_df.gender == 'm', 'prediction'] = " ".join(most_popular_m_items[:9] + most_popular_u_items[:3])
+    submission_df.loc[submission_df.gender == 'f', 'prediction'] = " ".join(most_popular_f_items[:9] + most_popular_u_items[:3])
+    submission_df.loc[submission_df.gender == 'u', 'prediction'] = " ".join(most_popular_u_items[:6] + most_popular_m_items[:3] + most_popular_f_items[:3])
 
     submission_df.drop('gender', axis=1, inplace=True)
 
@@ -79,6 +78,8 @@ def convert_all_to_parquet():
 
 
 def plot_pruning():
+    import matplotlib.pyplot as plt
+
     original_customer_df = load_data_from_hnm(DataFileNames.CUSTOMERS.replace('.csv', '.parquet'))
     original_articles_df = load_data_from_hnm(DataFileNames.ARTICLES.replace('.csv', '.parquet'),
                                               dtype={'article_id': str})
@@ -94,9 +95,6 @@ def plot_pruning():
     print(f'Pruned {len(original_customer_df) - len(pruned_customers_df)} customers.')
     print(
         f'Pruned {((len(original_customer_df) - len(pruned_customers_df)) / len(original_customer_df)) * 100}% of customers.')
-
-    # Create bar plot comparing original & new counts
-    import matplotlib.pyplot as plt
 
     fig, ax = plt.subplots()
     ax.bar(['Original', 'Pruned'], [len(original_customer_df), len(pruned_customers_df)])
@@ -121,9 +119,6 @@ def plot_pruning():
     print(
         f'Pruned {((len(original_transactions_df) - len(pruned_transactions_df)) / len(original_transactions_df)) * 100}% of transactions.')
 
-    # Create bar plot comparing original & new counts
-    import matplotlib.pyplot as plt
-
     fig, ax = plt.subplots()
     ax.bar(['Original', 'Pruned'], [len(original_articles_df), len(pruned_articles_df)])
     ax.set_ylabel('Article count')
@@ -134,6 +129,33 @@ def plot_pruning():
     ax.bar(['Original', 'Pruned'], [len(original_transactions_df), len(pruned_transactions_df)])
     ax.set_ylabel('Transaction count')
     ax.set_title('Original vs. pruned transaction count')
+    plt.show()
+
+
+def plot_genders():
+    import matplotlib.pyplot as plt
+
+    articles_df = load_data_from_hnm(DataFileNames.ARTICLES.replace('.csv', '.parquet'), True,
+                                     dtype={'article_id': str})
+    transactions_df = load_data_from_hnm(DataFileNames.TRANSACTIONS_TRAIN.replace('.csv', '.parquet'), True,
+                                         dtype={'article_id': str})
+    customers_df = load_data_from_hnm(DataFileNames.CUSTOMERS.replace('.csv', '.parquet'))
+
+    customers_df['gender'] = add_gender(customers_df, transactions_df, articles_df)
+
+    fig, ax = plt.subplots()
+    male_count = len(customers_df.loc[customers_df.gender == 'm'])
+    female_count = len(customers_df.loc[customers_df.gender == 'f'])
+    unknown_count = len(customers_df.loc[customers_df.gender == 'u'])
+
+    male_percentage = round(male_count/len(customers_df) * 100, 2)
+    female_percentage = round(female_count/len(customers_df) * 100, 2)
+    unknown_percentage = round(unknown_count/len(customers_df) * 100, 2)
+
+    bars = ax.bar([f"Male\n({male_percentage}%)", f"Female\n({female_percentage}%)", f"Unknown\n({unknown_percentage}%)"], [male_count, female_count, unknown_count])
+    ax.bar_label(bars)
+    ax.set_ylabel('Customer count')
+    ax.set_title('Customer counts by predicted gender')
     plt.show()
 
 
