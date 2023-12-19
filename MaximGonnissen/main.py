@@ -38,87 +38,10 @@ def convert_all_to_parquet():
     convert_to_parquet(data_path / DataFileNames.SAMPLE_SUBMISSION)
 
 
-def plot_pruning():
-    import matplotlib.pyplot as plt
-
-    original_customer_df = load_data_from_hnm(DataFileNames.CUSTOMERS.replace('.csv', '.parquet'))
-    original_articles_df = load_data_from_hnm(DataFileNames.ARTICLES.replace('.csv', '.parquet'),
-                                              dtype={'article_id': str})
-    original_transactions_df = load_data_from_hnm(DataFileNames.TRANSACTIONS_TRAIN.replace('.csv', '.parquet'),
-                                                  dtype={'article_id': str})
-
-    # Prune customers & check how many were pruned
-    pruned_customers_df = original_customer_df.copy()
-    pruned_customers_df = prune_no_purchases(pruned_customers_df, original_transactions_df)
-
-    print(f"Original customer count: {len(original_customer_df)}")
-    print(f"Pruned customer count: {len(pruned_customers_df)}")
-    print(f'Pruned {len(original_customer_df) - len(pruned_customers_df)} customers.')
-    print(
-        f'Pruned {((len(original_customer_df) - len(pruned_customers_df)) / len(original_customer_df)) * 100}% of customers.')
-
-    fig, ax = plt.subplots()
-    ax.bar(['Original', 'Pruned'], [len(original_customer_df), len(pruned_customers_df)])
-    ax.set_ylabel('Customer count')
-    ax.set_title('Original vs. pruned customer count')
-    plt.show()
-
-    # Prune articles & check how many were pruned
-    pruned_articles_df = original_articles_df.copy()
-    pruned_transactions_df = original_transactions_df.copy()
-    pruned_articles_df, pruned_transactions_df = prune_outdated_items(pruned_articles_df, pruned_transactions_df)
-
-    print(f"Original article count: {len(original_articles_df)}")
-    print(f"Pruned article count: {len(pruned_articles_df)}")
-    print(f'Pruned {len(original_articles_df) - len(pruned_articles_df)} articles.')
-    print(
-        f'Pruned {((len(original_articles_df) - len(pruned_articles_df)) / len(original_articles_df)) * 100}% of articles.')
-
-    print(f"Original transaction count: {len(original_transactions_df)}")
-    print(f"Pruned transaction count: {len(pruned_transactions_df)}")
-    print(f'Pruned {len(original_transactions_df) - len(pruned_transactions_df)} transactions.')
-    print(
-        f'Pruned {((len(original_transactions_df) - len(pruned_transactions_df)) / len(original_transactions_df)) * 100}% of transactions.')
-
-    fig, ax = plt.subplots()
-    ax.bar(['Original', 'Pruned'], [len(original_articles_df), len(pruned_articles_df)])
-    ax.set_ylabel('Article count')
-    ax.set_title('Original vs. pruned article count')
-    plt.show()
-
-    fig, ax = plt.subplots()
-    ax.bar(['Original', 'Pruned'], [len(original_transactions_df), len(pruned_transactions_df)])
-    ax.set_ylabel('Transaction count')
-    ax.set_title('Original vs. pruned transaction count')
-    plt.show()
-
-
-def plot_genders():
-    import matplotlib.pyplot as plt
-
-    articles_df = load_data_from_hnm(DataFileNames.ARTICLES.replace('.csv', '.parquet'), True,
-                                     dtype={'article_id': str})
-    transactions_df = load_data_from_hnm(DataFileNames.TRANSACTIONS_TRAIN.replace('.csv', '.parquet'), True,
-                                         dtype={'article_id': str})
-    customers_df = load_data_from_hnm(DataFileNames.CUSTOMERS.replace('.csv', '.parquet'))
-
-    customers_df['gender'] = add_gender(customers_df, transactions_df, articles_df)
-
-    fig, ax = plt.subplots()
-    male_count = len(customers_df.loc[customers_df.gender == 'm'])
-    female_count = len(customers_df.loc[customers_df.gender == 'f'])
-    unknown_count = len(customers_df.loc[customers_df.gender == 'u'])
-
-    male_percentage = round(male_count/len(customers_df) * 100, 2)
-    female_percentage = round(female_count/len(customers_df) * 100, 2)
-    unknown_percentage = round(unknown_count/len(customers_df) * 100, 2)
-
-    bars = ax.bar([f"Male\n({male_percentage}%)", f"Female\n({female_percentage}%)", f"Unknown\n({unknown_percentage}%)"], [male_count, female_count, unknown_count])
-    ax.bar_label(bars)
-    ax.set_ylabel('Customer count')
-    ax.set_title('Customer counts by predicted gender')
-    plt.show()
-
-
 if __name__ == '__main__':
-    generate_gender_recommendations()
+    print('Starting script at', time.strftime("%H:%M:%S", time.localtime()))
+
+    # Plot pruning
+    run_seasonal_analysis(-30, 60, rerun_all=True, do_prune_outdated_items=True)
+
+    print('Finished script at', time.strftime("%H:%M:%S", time.localtime()))
