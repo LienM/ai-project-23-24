@@ -46,7 +46,7 @@ def generate_gender_recommendations():
 
     articles_df, transactions_df = prune_outdated_items(articles_df, transactions_df, cutoff_days=365)
 
-    most_popular_m_items, most_popular_f_items = get_most_popular_gendered_items(articles_df, transactions_df)
+    most_popular_m_items, most_popular_f_items, most_popular_u_items = get_most_popular_gendered_items(articles_df, transactions_df)
 
     submission_df = sample_submission_df.copy()
 

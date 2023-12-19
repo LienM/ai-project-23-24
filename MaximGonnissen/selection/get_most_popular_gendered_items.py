@@ -1,12 +1,14 @@
-import pandas as pd
 from typing import List, Tuple
 
-from features.add_gender import add_gender_scores_to_articles
+import pandas as pd
+
 from features.add_article_total_sales_popularity import add_article_total_sales_popularity
 from features.add_article_unique_customers_popularity import add_article_unique_customers_popularity
+from features.add_gender import add_gender_scores_to_articles
 
 
-def get_most_popular_gendered_items(articles_df: pd.DataFrame, transactions_df: pd.DataFrame, item_amount: int = 12, alt_popularity: bool = False) -> Tuple[List[str], List[str]]:
+def get_most_popular_gendered_items(articles_df: pd.DataFrame, transactions_df: pd.DataFrame, item_amount: int = 12,
+                                    alt_popularity: bool = False) -> Tuple[List[str], List[str], List[str]]:
     """
     Selects the most popular gendered items from the articles dataframe.
     :param articles_df: The articles dataframe.
@@ -25,7 +27,9 @@ def get_most_popular_gendered_items(articles_df: pd.DataFrame, transactions_df: 
         else:
             temp_articles_df['popularity'] = add_article_total_sales_popularity(temp_articles_df, transactions_df)
 
-    male_top = temp_articles_df.sort_values(by=['gender_score', 'popularity'], ascending=[False, True]).head(item_amount)['article_id'].tolist()
-    female_top = temp_articles_df.sort_values(by=['gender_score', 'popularity'], ascending=[True, True]).head(item_amount)['article_id'].tolist()
+    popularity_sorted = temp_articles_df.sort_values(by='popularity', ascending=True)
+    male_top = popularity_sorted[popularity_sorted['gender_score'] <= -0.25]['article_id'].head(item_amount).tolist()
+    female_top = popularity_sorted[popularity_sorted['gender_score'] >= 0.25]['article_id'].head(item_amount).tolist()
+    unknown_top = popularity_sorted[popularity_sorted['gender_score'].between(-0.25, 0.25)]['article_id'].head(item_amount).tolist()
 
-    return male_top, female_top
+    return male_top, female_top, unknown_top
