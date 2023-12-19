@@ -97,9 +97,9 @@ def not_interacted_with_candidates_weekly(t, a, articles_col, k):
 
     # Not interacted category for each customer
     not_interacted_with = group_df\
-    .groupby(['customer_id', 'week'])[articles_col]\
-    .apply(lambda x: np.array(list(set(x))))\
-    .apply(lambda x: np.setdiff1d(group_unique_values, x))
+        .groupby(['customer_id', 'week'])[articles_col]\
+        .apply(lambda x: np.array(list(set(x))))\
+        .apply(lambda x: np.setdiff1d(group_unique_values, x))
 
     # Get k most popular articles in given category
     items_popularity = group_df\

@@ -2,6 +2,7 @@ import os
 import json
 
 import torch
+import numpy
 import pandas
 from tqdm import tqdm
 from transformers import pipeline
@@ -31,6 +32,7 @@ def create_image_embeddings(image_directory, output_file):
     embedder = create_feature_extractor(vgg, return_nodes={"classifier.0": "embedding"})
     with torch.no_grad():
         for inputs, article_ids in tqdm(data):
+            article_ids = numpy.array(article_ids).astype(numpy.int32)
             outputs = embedder(inputs.to(device))["embedding"]
             batch_embeddings = pandas.DataFrame(list(zip(article_ids, outputs.cpu().numpy())), columns=columns)
             embeddings = pandas.concat([embeddings, batch_embeddings])
@@ -55,8 +57,8 @@ def create_text_embeddings(articles_file, output_file, template="plain"):
     article_texts = (article_text(article) for article in tqdm(articles[columns].to_numpy()))
 
     # Compute bert embedding from create article text
-    embeddings = [embedding[CLASS_TOKEN] for embedding, in bert(article_texts)]
-    embeddings = pandas.DataFrame({"article_id": articles["article_id"], "embedding": embeddings})
+    embeddings = [numpy.average(embedding, axis=0) for embedding, in bert(article_texts)]
+    embeddings = pandas.DataFrame({"article_id": articles["article_id"].astype(numpy.int32), "embedding": embeddings})
     embeddings.to_parquet(output_file)
     return embeddings
 
