@@ -182,11 +182,12 @@ def calculate_recall_per_customer_batch(validation, top_candidates_3feat_prev_we
     return recall_last_week
 
 
-def calculate_recall_per_week(validation, top_candidates_3feat_prev_week, customer_batch, amount_of_weeks=5, top_x_age=25):
+def calculate_recall_per_week(validation, top_candidates_3feat_prev_week, customer_batch, top_x_age=25, compare_against_bestsellers=False):
 
     overall_mean_recalls = {}
+    max_week = validation['week'].max()
 
-    for week in range(validation['week'].max(), validation['week'].max() - amount_of_weeks, -1):
+    for week in range(max_week, max_week - 5, -1):
 
         # Filter validation and candidates for the current week
         validation_week = validation[validation['week'] == week]
@@ -204,10 +205,15 @@ def calculate_recall_per_week(validation, top_candidates_3feat_prev_week, custom
         actual_purchases_week = validation_corresp_customers.groupby('customer_id')['article_id'].apply(list)
         predicted_candidates_week = candidates_last_week.groupby('customer_id')['article_id'].apply(list)
 
+        # compare against (popularity) bestsellers
+        if compare_against_bestsellers:
+            for customer_id, predicted_candidates in predicted_candidates_week.items():
+                intersection = set([909370001, 865799006, 918522001, 924243001, 448509014, 751471001, 809238001, 918292001, 762846027, 809238005, 673677002, 923758001]).intersection(predicted_candidates)
+                if intersection:
+                    print(f"Week {week}, Customer {customer_id}: Intersection - {intersection}")
+
         # Calculate recall between actual purchases and predicted candidates for the current week
         recall_week = mean_recall(actual_purchases_week, predicted_candidates_week)
         overall_mean_recalls[week] = recall_week
-
-        print(f"Week {week}: Recall Score on Candidates for Last Week: {recall_week}")
 
     return overall_mean_recalls
