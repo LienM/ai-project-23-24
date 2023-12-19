@@ -3,6 +3,16 @@ import numpy as np
 import pandas as pd
 
 
+def read_parquet_datasets():
+
+    basepath = '../../input/'
+    transactions = pd.read_parquet(basepath + 'transactions_train.parquet')
+    customers = pd.read_parquet(basepath + 'customers.parquet')
+    articles = pd.read_parquet(basepath + 'articles.parquet')
+
+    return transactions, customers, articles
+
+
 def apk(actual, predicted, k=10):
     """
     Computes the average precision at k.
@@ -101,21 +111,18 @@ class Categorize(BaseEstimator, TransformerMixin):
                 range(X.shape[1])}
         return pd.DataFrame(data=data)
 
-### ###
+
+### Below is everything related to recall calculation ###
 
 # Copied from NickWils https://github.com/LienM/ai-project-23-24/blob/main/NickWils/Lecture6/candidate-repurchase.ipynb
 def recall(actual, predicted, k=12):
     if len(predicted) > k:
         predicted = predicted[:k]
-
     correct_predictions = [p for p in predicted if p in actual]
-
     return len(correct_predictions) / len(actual)
-
-
 def recall12(actual, predicted, k=12):
     return np.mean([recall(a, p, k) for a, p in zip(actual, predicted)])
-
+#
 
 def calculateRecall(expected, retrieved):
     """
@@ -146,21 +153,22 @@ def mean_recall(expected, retrieved):
 
 
 def calculate_recall_per_customer_batch(validation, top_candidates_3feat_prev_week, customer_batch, top_x_age=25):
+
     validation_corresp_customers = validation[validation['customer_id'].isin(customer_batch)]
 
     # Get the corresponding candidates generated for the  customers in the last week
     candidates_last_week = top_candidates_3feat_prev_week[
         (top_candidates_3feat_prev_week['week'] == validation_corresp_customers['week'].max()) &
         (top_candidates_3feat_prev_week['customer_id'].isin(validation_corresp_customers['customer_id'].unique()))
-        ]
+    ]
 
     validation_corresp_customers = validation_corresp_customers.sort_values(['customer_id', 'article_id'])
     candidates_last_week = candidates_last_week.sort_values(['customer_id', 'article_id'])
 
-    if validation['customer_id'].nunique() * top_x_age == candidates_last_week.shape[0]:
-        print("Validation and candidates_last_week have the same number of unique customers (OKAY).")
-    else:
-        print("Validation and candidates_last_week do not have the same number of unique customers (NOT REALLY OKAY).")
+    # if validation['customer_id'].nunique() * top_x_age == candidates_last_week.shape[0]:
+    #     print("Validation and candidates_last_week have the same number of unique customers (OKAY).")
+    # else:
+    #     print("Validation and candidates_last_week don't have the same number of unique customers (NOT REALLY OKAY).")
 
     # Group purchases and candidates by customer_id
     actual_purchases_last_week = validation_corresp_customers.groupby('customer_id')['article_id'].apply(list)
@@ -174,11 +182,32 @@ def calculate_recall_per_customer_batch(validation, top_candidates_3feat_prev_we
     return recall_last_week
 
 
-def read_parquet_datasets():
+def calculate_recall_per_week(validation, top_candidates_3feat_prev_week, customer_batch, amount_of_weeks=5, top_x_age=25):
 
-    basepath = '../../input/'
-    transactions = pd.read_parquet(basepath + 'transactions_train.parquet')
-    customers = pd.read_parquet(basepath + 'customers.parquet')
-    articles = pd.read_parquet(basepath + 'articles.parquet')
+    overall_mean_recalls = {}
 
-    return transactions, customers, articles
+    for week in range(validation['week'].max(), validation['week'].max() - amount_of_weeks, -1):
+
+        # Filter validation and candidates for the current week
+        validation_week = validation[validation['week'] == week]
+        validation_corresp_customers = validation_week[validation_week['customer_id'].isin(customer_batch)]
+
+        candidates_last_week = top_candidates_3feat_prev_week[
+            (top_candidates_3feat_prev_week['week'] == week) &
+            (top_candidates_3feat_prev_week['customer_id'].isin(validation_corresp_customers['customer_id'].unique()))
+        ]
+
+        validation_corresp_customers = validation_corresp_customers.sort_values(['customer_id', 'article_id'])
+        candidates_last_week = candidates_last_week.sort_values(['customer_id', 'article_id'])
+
+        # Group purchases and candidates by customer_id
+        actual_purchases_week = validation_corresp_customers.groupby('customer_id')['article_id'].apply(list)
+        predicted_candidates_week = candidates_last_week.groupby('customer_id')['article_id'].apply(list)
+
+        # Calculate recall between actual purchases and predicted candidates for the current week
+        recall_week = mean_recall(actual_purchases_week, predicted_candidates_week)
+        overall_mean_recalls[week] = recall_week
+
+        print(f"Week {week}: Recall Score on Candidates for Last Week: {recall_week}")
+
+    return overall_mean_recalls
