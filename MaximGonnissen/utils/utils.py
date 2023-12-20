@@ -94,17 +94,18 @@ def load_data_from_hnm(path: pathlib.Path, verbose: bool = True, as_parquet: boo
     :param as_parquet: Whether to load the data from a parquet file instead of a csv file.
     :return: Dataframe containing the data from the csv file.
     """
-    return load_data(get_data_path() / DataFileNames.HNM_DIR / path, verbose, **kwargs)
+    return load_data(get_data_path() / DataFileNames.HNM_DIR / path, verbose=verbose, as_parquet=as_parquet, **kwargs)
 
 
-def get_all_dataframes() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def get_all_dataframes(as_parquet: bool = True) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
     Returns all DataFrames.
+    :param as_parquet: Whether to load the data as parquet files.
     :return: (articles_df, customers_df, transactions_df, submissions_df)
     """
-    articles_df = load_data_from_hnm(DataFileNames.ARTICLES, as_parquet=True)
-    customers_df = load_data_from_hnm(DataFileNames.CUSTOMERS, as_parquet=True)
-    transactions_df = load_data_from_hnm(DataFileNames.TRANSACTIONS_TRAIN, as_parquet=True)
-    submissions_df = load_data_from_hnm(DataFileNames.SAMPLE_SUBMISSION, as_parquet=True)
+    articles_df = load_data_from_hnm(DataFileNames.ARTICLES, as_parquet=as_parquet)
+    customers_df = load_data_from_hnm(DataFileNames.CUSTOMERS, as_parquet=as_parquet)
+    transactions_df = load_data_from_hnm(DataFileNames.TRANSACTIONS_TRAIN, as_parquet=as_parquet)
+    submissions_df = load_data_from_hnm(DataFileNames.SAMPLE_SUBMISSION, as_parquet=as_parquet)
 
     return articles_df, customers_df, transactions_df, submissions_df
