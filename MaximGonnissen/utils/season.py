@@ -107,6 +107,7 @@ class Season:
     """
     Season class that holds information about a season.
     """
+
     def __init__(self, season_name: str, start_doy: CalendarDay, end_doy: CalendarDay):
         """
         :param season_name: Season name
@@ -175,9 +176,21 @@ class Season:
         return score
 
 
-seasons = [
-    Season('spring', 60, 151),
-    Season('summer', 152, 243),
-    Season('fall', 244, 334),
-    Season('winter', 335, 59)
-]
+class Seasons:
+    seasons = [
+        Season('spring', 60, 151),
+        Season('summer', 152, 243),
+        Season('fall', 244, 334),
+        Season('winter', 335, 59)
+    ]
+
+    @classmethod
+    def get_season(cls, date: pd.Timestamp) -> Season:
+        """
+        Returns the season for a given date.
+        :param date: Date to get season for.
+        :return: Season for given date.
+        """
+        for season in cls.seasons:
+            if season.in_season(date):
+                return season

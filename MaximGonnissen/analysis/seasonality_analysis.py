@@ -12,19 +12,8 @@ import pandas as pd
 from pruning.prune_outdated_items import prune_outdated_items
 from utils.kaggle_tool import KaggleTool
 from utils.progress_bar import ProgressBar
-from utils.season import Season, seasons
+from utils.season import Seasons
 from utils.utils import DataFileNames, load_data_from_hnm, get_data_path, load_data, ProjectConfig
-
-
-def get_season(date: pd.Timestamp) -> Season:
-    """
-    Returns the season for a given date.
-    :param date: Date to get season for.
-    :return: Season for given date.
-    """
-    for season in seasons:
-        if season.in_season(date):
-            return season
 
 
 def article_sales_per_date(transactions_df: pd.DataFrame, verbose: bool = True) -> pd.DataFrame:
@@ -63,7 +52,7 @@ def calculate_seasonal_sales(df: pd.DataFrame, verbose: bool = True) -> pd.DataF
 
     new_df = df.copy()
     new_df['t_dat'] = pd.to_datetime(new_df['t_dat'])
-    new_df['season'] = new_df['t_dat'].apply(get_season)
+    new_df['season'] = new_df['t_dat'].apply(Seasons.get_season)
     new_df = new_df[['article_id', 'season', 'count']]
 
     new_df = new_df.groupby(['article_id', 'season']).sum().reset_index()
@@ -91,7 +80,7 @@ def calculate_season_scores(df: pd.DataFrame, max_score_offset: int, max_score_d
     new_df = df.copy()
     new_df['t_dat'] = pd.to_datetime(new_df['t_dat'])
 
-    with ProgressBar(seasons, show=verbose) as progress_bar:
+    with ProgressBar(Seasons.seasons, show=verbose) as progress_bar:
         for season in progress_bar:
             new_df[season.season_name] = new_df['t_dat'].apply(
                 lambda x: season.get_season_score(x, max_score_offset, max_score_day_range))
@@ -121,7 +110,7 @@ def calculate_top_sales(df: pd.DataFrame, start_date: datetime.datetime, end_dat
     out_df['date'] = pd.to_datetime(out_df['date'])
 
     for day in pd.date_range(start_date, end_date):
-        season = get_season(day)
+        season = Seasons.get_season(day)
         top_x_items = df.sort_values(by=season.season_name, ascending=False).head(top_x)['article_id'].tolist()
         out_df = out_df._append({'date': day, 'items': ' '.join([str(item_id) for item_id in top_x_items])},
                                 ignore_index=True)
@@ -174,7 +163,7 @@ def _run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, reru
     article_sales_per_date_df = None
     if not article_sales_per_date_path.exists() or rerun_all:
         # Calculate sales per date for each article
-        article_sales_per_date_df = article_sales_per_date(transactions_df)
+        article_sales_per_date_df = article_sales_per_date(transactions_df, verbose=verbose)
 
         if to_csv:
             article_sales_per_date_df.to_csv(article_sales_per_date_path, index=False)
@@ -184,7 +173,7 @@ def _run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, reru
     seasonal_sales_df = None
     if not seasonal_sales_path.exists() or rerun_all:
         # Calculate seasonal sales numbers for each article
-        seasonal_sales_df = calculate_seasonal_sales(article_sales_per_date_df)
+        seasonal_sales_df = calculate_seasonal_sales(article_sales_per_date_df, verbose=verbose)
 
         if to_csv:
             seasonal_sales_df.to_csv(seasonal_sales_path, index=False)
@@ -248,7 +237,20 @@ def already_ran_for(score_offset: int, day_range: int, kaggle_tool: KaggleTool):
 
 
 def run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, check_already_ran: bool = False,
-                          rerun_seasonal_scores: bool = True, rerun_all: bool = False, do_prune_outdated_items: bool = True):
+                          rerun_seasonal_scores: bool = True, rerun_all: bool = False,
+                          do_prune_outdated_items: bool = True, submit_to_kaggle: bool = True, keep_zip: bool = False):
+    """
+    Runs seasonal analysis for a given set of parameters.
+    :param max_score_offset: Offset from start of season to max score day.
+    :param max_score_day_range: Range of days around max score day to calculate score for.
+    :param check_already_ran: Whether to check Kaggle submissions if the analysis already ran for the given parameters.
+    :param rerun_seasonal_scores: Whether to rerun the seasonal scores.
+    :param rerun_all: Whether to rerun all calculations.
+    :param do_prune_outdated_items: Whether to prune outdated items.
+    :param submit_to_kaggle: Whether to submit the results to Kaggle.
+    :param keep_zip: Whether to keep the zip file.
+    :return:
+    """
     kaggle_tool = KaggleTool('h-and-m-personalized-fashion-recommendations')
 
     if check_already_ran:
@@ -267,6 +269,9 @@ def run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, check
     print(
         f'> Finished analysis for max_score_offset={max_score_offset} and max_score_day_range={max_score_day_range} in {time.time() - start_time} seconds.')
 
+    if not (submit_to_kaggle or keep_zip):
+        return output_bytes
+
     print(f'> Zipping output')
     zip_path = get_data_path() / DataFileNames.OUTPUT_DIR / DataFileNames.ZIP_DIR / f'seasonal_analysis_{max_score_offset}_{max_score_day_range}.zip'
 
@@ -276,11 +281,17 @@ def run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, check
     with zipfile.ZipFile(zip_path, 'w') as zip_file:
         zip_file.writestr('seasonal_analysis.csv', output_bytes.getvalue())
 
-    print(f'> Uploading output to Kaggle')
-    metadata = {'max_score_offset': max_score_offset, 'max_score_day_range': max_score_day_range, }
-    kaggle_tool.upload_submission(zip_path, metadata=metadata)
+    if submit_to_kaggle:
+        print(f'> Uploading output to Kaggle')
+        metadata = {'max_score_offset': max_score_offset, 'max_score_day_range': max_score_day_range,
+                    'do_prune_outdated_items': do_prune_outdated_items}
 
-    return
+        kaggle_tool.upload_submission(zip_path, metadata=metadata)
+
+    if not keep_zip:
+        zip_path.unlink()
+
+    return output_bytes
 
 
 def run_seasonal_analysis_parallel(_mp_pool_count: int, combinations: list):
