@@ -1,6 +1,7 @@
 import pathlib
 import time
 from datetime import datetime
+from typing import Tuple
 
 import pandas as pd
 
@@ -62,16 +63,19 @@ def get_data_path() -> pathlib.Path:
     return data_path
 
 
-def load_data(path: pathlib.Path, verbose: bool = True, **kwargs) -> pd.DataFrame:
+def load_data(path: pathlib.Path, verbose: bool = True, as_parquet: bool = False, **kwargs) -> pd.DataFrame:
     """
     Load data from a csv file, measuring the time it takes to load.
     :param path: Path to the csv file.
     :param verbose: Whether to print information about the loading process.
+    :param as_parquet: Whether to load the data from a parquet file instead of a csv file.
     :return: Dataframe containing the data from the csv file.
     """
     time_start = time.time()
     if verbose:
         print(f'[ ] Loading data from {path}...')
+    if as_parquet:
+        path = DataFileNames.as_parquet(path)
     if path.suffix == '.parquet':
         df = pd.read_parquet(path)
     else:
@@ -81,12 +85,26 @@ def load_data(path: pathlib.Path, verbose: bool = True, **kwargs) -> pd.DataFram
     return df
 
 
-def load_data_from_hnm(path: pathlib.Path, verbose: bool = True, **kwargs) -> pd.DataFrame:
+def load_data_from_hnm(path: pathlib.Path, verbose: bool = True, as_parquet: bool = False, **kwargs) -> pd.DataFrame:
     """
     Load data from a csv file in the h-and-m-personalized-fashion-recommendations folder,
     measuring the time it takes to load.
     :param path: Path to the csv file.
     :param verbose: Whether to print information about the loading process.
+    :param as_parquet: Whether to load the data from a parquet file instead of a csv file.
     :return: Dataframe containing the data from the csv file.
     """
     return load_data(get_data_path() / DataFileNames.HNM_DIR / path, verbose, **kwargs)
+
+
+def get_all_dataframes() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """
+    Returns all DataFrames.
+    :return: (articles_df, customers_df, transactions_df, submissions_df)
+    """
+    articles_df = load_data_from_hnm(DataFileNames.ARTICLES, as_parquet=True)
+    customers_df = load_data_from_hnm(DataFileNames.CUSTOMERS, as_parquet=True)
+    transactions_df = load_data_from_hnm(DataFileNames.TRANSACTIONS_TRAIN, as_parquet=True)
+    submissions_df = load_data_from_hnm(DataFileNames.SAMPLE_SUBMISSION, as_parquet=True)
+
+    return articles_df, customers_df, transactions_df, submissions_df
