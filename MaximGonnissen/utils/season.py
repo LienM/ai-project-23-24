@@ -86,9 +86,6 @@ class CalendarDay:
             raise TypeError(f'Cannot subtract CalendarDay from {type(other)}.')
 
     def days_until(self, other) -> int:
-        if not isinstance(other, CalendarDay):
-            raise TypeError(f'Cannot calculate days between CalendarDay and {type(other)}.')
-
         if self.doy == other.doy:
             return 0
         elif self.doy > other.doy:
@@ -97,9 +94,6 @@ class CalendarDay:
             return other.doy - self.doy
 
     def distance_from(self, other) -> int:
-        if not isinstance(other, CalendarDay):
-            raise TypeError(f'Cannot calculate days between CalendarDay and {type(other)}.')
-
         return min(self.days_until(other), other.days_until(self))
 
 
@@ -121,6 +115,7 @@ class Season:
         if isinstance(end_doy, int):
             end_doy = CalendarDay(end_doy)
         self.end_doy = end_doy
+        self.season_length = self.end_doy.distance_from(self.start_doy)
 
     def max_score_day(self, max_score_offset: int) -> CalendarDay:
         return self.start_doy + max_score_offset
@@ -144,22 +139,13 @@ class Season:
     def __hash__(self):
         return hash(self.season_name)
 
-    def season_length(self) -> int:
-        """
-        Returns the length of the season in days.
-        :return: Length of the season in days.
-        """
-        return self.start_doy.distance_from(self.end_doy)
-
     def in_season(self, date: pd.Timestamp) -> bool:
         """
         Checks if a date is in the season.
         :param date: Date to check
         :return: True if date is in season, False otherwise.
         """
-        date_doy = date.dayofyear
-        calendar_day = CalendarDay(date_doy)
-        return calendar_day.days_until(self.end_doy) <= self.season_length()
+        return CalendarDay(date.dayofyear).days_until(self.end_doy) <= self.season_length
 
     def get_season_score(self, date: pd.Timestamp, max_score_offset: int, max_score_day_range: int) -> float:
         """
