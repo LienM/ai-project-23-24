@@ -109,12 +109,15 @@ class Season:
         :param end_doy: End day of year
         """
         self.season_name = season_name
+
         if isinstance(start_doy, int):
             start_doy = CalendarDay(start_doy)
         self.start_doy = start_doy
+
         if isinstance(end_doy, int):
             end_doy = CalendarDay(end_doy)
         self.end_doy = end_doy
+
         self.season_length = self.end_doy.distance_from(self.start_doy)
 
     def max_score_day(self, max_score_offset: int) -> CalendarDay:
