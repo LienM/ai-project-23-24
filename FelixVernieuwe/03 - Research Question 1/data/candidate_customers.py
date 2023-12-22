@@ -47,3 +47,25 @@ def get_all_customer_candidates(transactions, customers, reference_week):
     ref_week_candidate_customers['week'] = reference_week
     
     return candidate_customers, ref_week_candidate_customers
+
+
+def get_missing_customers_candidates(transactions, customers, reference_week):
+    """
+    Returns all customers that have not bought anything in the entire dataset as candidate customers
+    :returns:
+        - **missing_customers** - all customers that have not bought anything in the entire dataset as candidate customers
+    """
+
+    # Get all customers that have bought something in the entire dataset
+    existing_customers = transactions['customer_id'].unique()
+
+    # Get all customers that have not bought anything in the entire dataset
+    missing_customers = customers[~customers["customer_id"].isin(existing_customers)][['customer_id']]
+
+    # Polyfill a random sales channel for all missing customers
+    missing_customers['channel'] = np.random.randint(1, 3, missing_customers.shape[0])
+
+    # Set the reference week for all missing customers
+    missing_customers['week'] = reference_week
+
+    return missing_customers

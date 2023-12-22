@@ -4,7 +4,6 @@ import pandas as pd
 def most_sold_per_week(transactions: pd.DataFrame):
     """For every week, get the top-12 most sold products"""
 
-
     # For every article, get the mean price it was sold for per week
     # week | (article_id, price)
     #   95 |
@@ -39,6 +38,7 @@ def most_sold_per_week(transactions: pd.DataFrame):
 
     # End result: top-12 best ranked articles per week in transaction-format (to be merged with customer)
     return most_sold_products_per_week_ranked
+
 
 def most_sold_all_time(transactions: pd.DataFrame):
     """Get the most sold products all time"""

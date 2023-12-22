@@ -7,9 +7,9 @@ PROMOTION_THRESHOLD = 0.6
 RED_SHADES = ["#FFCDD2", "#EF9A9A", "#E57373", "#EF5350", "#F44336", "#E53935", "#D32F2F", "#C62828", "#B71C1C"]
 GREEN_SHADES = ['#5ae064', '#4cd855', '#3fc346', '#32b737', '#259c28', '#1a8219', '#0d670a', '#005c00', '#005000']
 
-
 sns.set(rc={'figure.figsize': (15, 10)})
 sns.set_style("whitegrid")
+
 
 def discount_data(transactions: pd.DataFrame, promotion_threshold=PROMOTION_THRESHOLD):
     """
@@ -71,12 +71,12 @@ def plot_product_sales(product, transactions: pd.DataFrame, promoted_articles: p
     product_purchases = transactions[transactions['article_id'] == product]['week'].value_counts().sort_index()
 
     # Gets the discount information per week for the product
-    product_discount = promoted_articles[promoted_articles['article_id'] == product].set_index('week')[['has_promotion', 'discount']]
+    product_discount = promoted_articles[promoted_articles['article_id'] == product].set_index('week')[
+        ['has_promotion', 'discount']]
     product_purchases = product_purchases.to_frame().join(product_discount).fillna(False)
 
     product_purchases = product_purchases.reset_index()
     product_purchases["has_promotion"] = product_purchases["has_promotion"].astype(int).astype(str)
-
 
     # Plots the data, a bar is red if there is no discount, green if there is a discount
     plot = sns.barplot(x='week', y='count', data=product_purchases, hue='has_promotion',
@@ -103,6 +103,7 @@ def plot_product_sales(product, transactions: pd.DataFrame, promoted_articles: p
 
     plot.xaxis.set_major_locator(ticker.MultipleLocator(4))
     plot = plot.set_xticklabels(plot.get_xticklabels(), rotation=45, horizontalalignment='right')
+
 
 def plot_random_product_sales(transactions: pd.DataFrame, promoted_articles: pd.DataFrame):
     # Sample a random article_id that has more than 1000 transactions
