@@ -30,9 +30,11 @@ It was the intention that we come up with one or more research questions and try
 The most important parts of the project are:
 
 * `04-Research/` - folder with files related to my first research question.
-* `05-Research/` - folder with files related to my second research question.
+* `05-Research/` - folder with files related to my second (main) research question.
 
 Each folder has a respective README.md file with more information.
+
+For this project, only the `05-Research/` folder is relevant. The `04-Research/` folder is not relevant and should not be looked at.
 
 
 
