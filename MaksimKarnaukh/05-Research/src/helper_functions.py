@@ -1,6 +1,7 @@
 from sklearn.base import BaseEstimator, TransformerMixin
 import numpy as np
 import pandas as pd
+from typing import Tuple, List, Dict
 
 
 def read_parquet_datasets():
@@ -22,6 +23,9 @@ def read_parquet_datasets():
     transactions: pd.DataFrame = pd.read_parquet(base_path + 'transactions_train.parquet')
     customers: pd.DataFrame = pd.read_parquet(base_path + 'customers.parquet')
     articles: pd.DataFrame = pd.read_parquet(base_path + 'articles.parquet')
+
+    # Replace -1 values in age column with mean age for better candidate generation results
+    customers.age.replace(-1, customers.age.mean(), inplace=True)
 
     return transactions, customers, articles
 
@@ -137,7 +141,8 @@ def recall12(actual, predicted, k=12):
     return np.mean([recall(a, p, k) for a, p in zip(actual, predicted)])
 # /\
 
-def calculateRecall(actual, predicted):
+
+def calculateRecall(actual: List[int], predicted: List[int]) -> float:
     """
     Calculates the recall, which is the number of retrieved values
     that are also in expected (True positive)
@@ -153,20 +158,20 @@ def calculateRecall(actual, predicted):
 
     Returns
     -------
-    score : double
+    score : float
             The recall of the predicted list over the actual list
 
     """
-    # number of retrieved values that are also in expected (True positive)
-    TP = len([ret for ret in predicted if ret in actual])
-    # number of expected values that aren't retrieved (False negative)
-    FN = len([ex for ex in actual if ex not in predicted])
+    # number of predicted values that are also in actual (True positive)
+    tp: int = len([ret for ret in predicted if ret in actual])
+    # number of actual values that aren't predicted (False negative)
+    fn: int = len([ex for ex in actual if ex not in predicted])
     # recall calculation (by formula)
-    recall = TP / (TP + FN)
+    recall: float = tp / (tp + fn)
     return recall
 
 
-def mean_recall(actual, predicted):
+def mean_recall(actual: List[List[int]], predicted: List[List[int]]) -> float:
     """
     Calculates the mean recall.
 
@@ -179,16 +184,16 @@ def mean_recall(actual, predicted):
 
     Returns
     -------
-    score : double
+    score : float
             The mean recall.
 
     """
-    recalls = [calculateRecall(ex, ret) for ex, ret in zip(actual, predicted)]
-    mean_recall = np.mean(recalls)
+    recalls: List[float] = [calculateRecall(ex, ret) for ex, ret in zip(actual, predicted)]
+    mean_recall: float = np.mean(recalls)
     return mean_recall
 
 
-def calculate_recall_per_customer_batch(validation, top_candidates_3feat_prev_week, customer_batch, top_x_age=25):
+def calculate_recall_per_customer_batch(validation: pd.DataFrame, top_candidates_3feat_prev_week: pd.DataFrame, customer_batch: List[int], top_x_age: int = 25) -> float:
     """
     Calculates the mean recall for the candidates of a batch of customers in the last week (104) of transactions.
 
@@ -205,24 +210,24 @@ def calculate_recall_per_customer_batch(validation, top_candidates_3feat_prev_we
 
     Returns
     -------
-    score : double
+    score : float
             The mean recall on the candidates for the customer batch for the last week.
 
     """
 
     # Filter validation to only contain the customers in the batch
-    validation_corresp_customers = validation[validation['customer_id'].isin(customer_batch)]
+    validation_corresp_customers: pd.DataFrame = validation[validation['customer_id'].isin(customer_batch)]
 
     # Get the corresponding candidates generated for the customers in the last week
-    candidates_last_week = top_candidates_3feat_prev_week[
+    candidates_last_week: pd.DataFrame = top_candidates_3feat_prev_week[
         (top_candidates_3feat_prev_week['week'] == validation_corresp_customers['week'].max()) &
         (top_candidates_3feat_prev_week['customer_id'].isin(validation_corresp_customers['customer_id'].unique()))
     ]
 
     # Sort both validation and candidates_last_week by customer_id (and article_id)
-    # so that the customer_id values match for the mean recall function
-    validation_corresp_customers = validation_corresp_customers.sort_values(['customer_id', 'article_id'])
-    candidates_last_week = candidates_last_week.sort_values(['customer_id', 'article_id'])
+    # to make sure that the customer_id values match for the mean recall function
+    validation_corresp_customers: pd.DataFrame = validation_corresp_customers.sort_values(['customer_id', 'article_id'])
+    candidates_last_week: pd.DataFrame = candidates_last_week.sort_values(['customer_id', 'article_id'])
 
     # Check if validation and candidates_last_week have the same number of unique customers,
     # this is a little sanity check. Commented out for performance reasons.
@@ -231,21 +236,21 @@ def calculate_recall_per_customer_batch(validation, top_candidates_3feat_prev_we
     # else:
     #     print("Validation and candidates_last_week don't have the same number of unique customers (NOT REALLY OKAY).")
 
-    # Group actual purchases and candidates by customer_id to pass on to mean_recall function
-    actual_purchases_last_week = validation_corresp_customers.groupby('customer_id')['article_id'].apply(list)
-    predicted_candidates_last_week = candidates_last_week.groupby('customer_id')['article_id'].apply(list)
+    # Group actual purchases and candidates by customer_id to get the lists of articles
+    actual_purchases_last_week: List[List[int]] = validation_corresp_customers.groupby('customer_id')['article_id'].apply(list).tolist()
+    predicted_candidates_last_week: List[List[int]] = candidates_last_week.groupby('customer_id')['article_id'].apply(list).tolist()
 
     # Calculate recall between actual purchases and predicted candidates for the last week
-    recall_last_week = mean_recall(actual_purchases_last_week, predicted_candidates_last_week)
+    recall_last_week: float = mean_recall(actual_purchases_last_week, predicted_candidates_last_week)
 
     print("Recall Score on Candidates for Last Week:", recall_last_week)
 
     return recall_last_week
 
 
-def calculate_recall_per_week(validation, top_candidates_3feat_prev_week, customer_batch, top_x_age=25, compare_against_bestsellers=False):
+def calculate_recall_per_week(validation: pd.DataFrame, top_candidates_3feat_prev_week: pd.DataFrame, customer_batch: List[int], compare_against_bestsellers: bool = False) -> Dict[int, float]:
     """
-    Calculates the mean recall for the candidates of a batch of customers in the last week (104) of transactions.
+    Calculates the mean recall for the candidates of a batch of customers in the last 5 weeks of transactions.
 
     Parameters
     ----------
@@ -255,46 +260,55 @@ def calculate_recall_per_week(validation, top_candidates_3feat_prev_week, custom
                 The candidates dataset
     customer_batch : list
                 A list of (unique) customer_ids which are part of the total customer set in our training data
-    top_x_age : int, optional
-                The number of candidates per customer, used for a sanity check
+    compare_against_bestsellers : bool, optional
+                Whether to compare the candidates against the bestsellers with intersection (default is False)
 
     Returns
     -------
-    score : double
-            The mean recall on the candidates for the customer batch for the last week.
+    score : dict
+            The mean recall on the candidates for the customer batch per week.
 
     """
 
-    overall_mean_recalls = {}
-    max_week = validation['week'].max()
+    overall_mean_recalls: Dict[int, float] = {}
+    max_week: int = validation['week'].max()
 
     for week in range(max_week, max_week - 5, -1):
 
         # Filter validation and candidates for the current week
-        validation_week = validation[validation['week'] == week]
-        validation_corresp_customers = validation_week[validation_week['customer_id'].isin(customer_batch)]
+        validation_week: pd.DataFrame = validation[validation['week'] == week]
+        validation_corresp_customers: pd.DataFrame = validation_week[validation_week['customer_id'].isin(customer_batch)]
 
-        candidates_last_week = top_candidates_3feat_prev_week[
+        candidates_last_week: pd.DataFrame = top_candidates_3feat_prev_week[
             (top_candidates_3feat_prev_week['week'] == week) &
             (top_candidates_3feat_prev_week['customer_id'].isin(validation_corresp_customers['customer_id'].unique()))
         ]
 
-        validation_corresp_customers = validation_corresp_customers.sort_values(['customer_id', 'article_id'])
-        candidates_last_week = candidates_last_week.sort_values(['customer_id', 'article_id'])
+        # Sort both validation_corresp_customers and candidates_last_week by customer_id (and article_id)
+        # to make sure that the customer_id values match for the mean recall function
+        validation_corresp_customers: pd.DataFrame = validation_corresp_customers.sort_values(['customer_id', 'article_id'])
+        candidates_last_week: pd.DataFrame = candidates_last_week.sort_values(['customer_id', 'article_id'])
 
-        # Group purchases and candidates by customer_id
-        actual_purchases_week = validation_corresp_customers.groupby('customer_id')['article_id'].apply(list)
-        predicted_candidates_week = candidates_last_week.groupby('customer_id')['article_id'].apply(list)
+        # Group purchases and candidates by customer_id to get the lists of articles
+        actual_purchases_week: List[List[int]] = validation_corresp_customers.groupby('customer_id')['article_id'].apply(list).tolist()
+        predicted_candidates_week: List[List[int]] = candidates_last_week.groupby('customer_id')['article_id'].apply(list).tolist()
 
         # compare against (popularity) bestsellers
         if compare_against_bestsellers:
+            bestsellers_per_week: Dict[int, List[int]] = {
+                    100: [916468003, 812668001, 866731001, 610776002, 896152002, 923460001, 896152001, 751471001, 938182001, 894668003, 706016003, 870328003],
+                    101: [916468003, 896152003, 896152002, 751471001, 706016001, 918292001, 921906003, 751471043, 706016003, 918292004, 915526002, 920610001],
+                    102: [898694001, 933706001, 751471001, 915526001, 915529003, 706016001, 918292001, 751471043, 915526002, 915529001, 862970001, 863595006],
+                    103: [915526001, 751471043, 751471001, 706016001, 919365008, 915529003, 918292001, 863595006, 896152002, 448509014, 909916001, 762846031],
+                    104: [909370001, 865799006, 918522001, 924243001, 448509014, 751471001, 809238001, 918292001, 762846027, 809238005, 673677002, 923758001],
+            }
             for customer_id, predicted_candidates in predicted_candidates_week.items():
-                intersection = set([909370001, 865799006, 918522001, 924243001, 448509014, 751471001, 809238001, 918292001, 762846027, 809238005, 673677002, 923758001]).intersection(predicted_candidates)
+                intersection = set(bestsellers_per_week[week]).intersection(predicted_candidates)
                 if intersection:
                     print(f"Week {week}, Customer {customer_id}: Intersection - {intersection}")
 
         # Calculate recall between actual purchases and predicted candidates for the current week
-        recall_week = mean_recall(actual_purchases_week, predicted_candidates_week)
+        recall_week: float = mean_recall(actual_purchases_week, predicted_candidates_week)
         overall_mean_recalls[week] = recall_week
 
     return overall_mean_recalls

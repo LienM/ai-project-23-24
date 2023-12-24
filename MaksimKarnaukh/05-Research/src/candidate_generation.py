@@ -1,16 +1,40 @@
 import time
 import pandas as pd
+from typing import List
 
 
-def get_candidates(customer_chunks, unique_articles, t_merged, mean_age_per_article, top_x_price=50, top_x_age=25):
+def get_candidates(customer_chunks: List[List[int]], unique_articles: pd.DataFrame, t_merged: pd.DataFrame, mean_age_per_article: pd.DataFrame, top_x_price=50, top_x_age=25):
+    """
+    Generates top_x_age amount of candidates per customer for the customer_ids in customer_chunks
+    using my three feature-based candidate generation method.
 
-    result_candidates_3feat = pd.DataFrame()  # DataFrame to store final candidates
-    result_candidates_3feat_chunks = []
+    Parameters
+    ----------
+    customer_chunks : list
+                        A list of lists of customer_ids for which to calculate the candidates.
+    unique_articles : DataFrame
+                        A DataFrame containing all unique articles.
+    t_merged : DataFrame
+                transactions_with_2feat DataFrame merged with customers[['customer_id', 'age']].
+    top_x_price : int, optional
+                The number of candidates for the second filtering step (on price)
+    top_x_age : int, optional
+                The number of candidates for the final filtering step (on age)
+
+
+    Returns
+    -------
+    score : DataFrame
+            A dataframe containing the top_x_age amount of candidates per customer_id in customer_chunks.
+
+    """
+    result_candidates_3feat: pd.DataFrame = pd.DataFrame()  # DataFrame to store final candidates
+    result_candidates_3feat_chunks: List[pd.DataFrame] = []
 
     for idx, customer_chunk in enumerate(customer_chunks):
         start = time.time()
         # Cartesian product of unique articles and customers, since we want to choose candidates out of all unique articles for each customer
-        candidate_articles = pd.merge(
+        candidate_articles: pd.DataFrame = pd.merge(
             unique_articles,
             pd.DataFrame({'customer_id': customer_chunk}),
             how='cross'
@@ -32,8 +56,8 @@ def get_candidates(customer_chunks, unique_articles, t_merged, mean_age_per_arti
             .groupby(['week', 'customer_id'])['price_difference']
             .rank(ascending=True, method='min')
         )
-        # Select the top 50 candidates for each customer
-        top_candidates = (
+        # Select the top x candidates for each customer
+        top_candidates: pd.DataFrame = (
             candidate_articles
             .sort_values(by=['customer_id', 'week', 'price_rank'])
             .groupby(['week', 'customer_id'])
@@ -48,7 +72,7 @@ def get_candidates(customer_chunks, unique_articles, t_merged, mean_age_per_arti
             .groupby(['week', 'customer_id'])['age_difference']
             .rank(ascending=True, method='min')
         )
-        # Select the top 12 candidates for each customer based on age difference
+        # Select the top x candidates for each customer based on age difference
         top_candidates = (
             top_candidates
             .sort_values(by=['customer_id', 'week', 'age_rank'])
@@ -61,7 +85,7 @@ def get_candidates(customer_chunks, unique_articles, t_merged, mean_age_per_arti
         print(f'Chunk {idx} processed in {time.time() - start:.2f} seconds')
 
     # Concatenate all chunks into the final result
-    result_candidates_3feat = pd.concat(result_candidates_3feat_chunks, ignore_index=True)
+    result_candidates_3feat: pd.DataFrame = pd.concat(result_candidates_3feat_chunks, ignore_index=True)
 
     top_candidates_3feat = result_candidates_3feat.drop(columns=['price_difference', 'age_difference'])
     return top_candidates_3feat
