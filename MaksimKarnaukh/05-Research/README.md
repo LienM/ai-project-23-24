@@ -20,7 +20,7 @@ The notebooks are self-contained and can be run as is. The data is expected to b
 The notebook is expected to be run in a Jupyter Notebook environment.
 
 There should be a folder called `input/` in the same directory where the `05-Research/` folder is located, 
-with the three dataset (articles.parquet, customers.parquet and transactions_train.parquet) files 
+containing the three datasets (articles.parquet, customers.parquet and transactions_train.parquet) files 
 in parquet format and the sample_submission.csv file.
 
 ## Structure
