@@ -30,14 +30,21 @@ The `05-Research/` folder contains the following files:
 * `README.md` - this file.
 * `requirements.txt` - requirements file.
 * `src/` - folder containing all the code files.
-  * `src/candidate_generation.py` - file containing the code for feature engineering.
-  * `src/helper_functions.py` - file containing the code for feature engineering.
-  * `src/nb_candidates_recall.py` - file containing the code for feature engineering.
-  * `src/nb_candidates_recall2.py` - file containing the code for feature engineering.
-  * `src/nb_candidates_recall3.py` - file containing the code for feature engineering.
-  * `src/nb_candidates_recall_5weeks.py` - file containing the code for feature engineering.
-  * `src/nb_radek_candidates_recall.py` - file containing the code for feature engineering.
-  * `src/nb_research.py` - file containing the code for feature engineering.
+  * `src/candidate_generation.py` - python file containing the candidate generation code.
+  * `src/helper_functions.py` - python file containing helper functions e.g. dataset reading and performance metric functions.
+  
+  * `src/nb_candidates_recall.py` - notebook containing the code for the recall calculation for my generated candidates (**25** per customer).
+  * `src/nb_candidates_recall2.py` - notebook containing the code for the recall calculation for my generated candidates (**50** per customer).
+  * `src/nb_candidates_recall3.py` - notebook containing the code for the recall calculation for my generated candidates (**100** per customer).
+  * `src/nb_candidates_recall_5weeks.py` - notebook containing the code for the recall calculation for my generated candidates (**25** per customer), 
+  for the last five weeks as validation data.
+  * `src/nb_radek_candidates_recall.py` - notebook containing the code for the recall calculation for 
+  [Radek's](https://www.kaggle.com/code/marcogorelli/radek-s-lgbmranker-starter-pack) 
+  generated bestseller candidates (**12** per customer), both for only last week as validation and the last five weeks as validation.
+  * `src/nb_research.py` - notebook containing the general code for the research question. 
+  This follows the same structure as [Radek's](https://www.kaggle.com/code/marcogorelli/radek-s-lgbmranker-starter-pack) 
+  file where I thus create my three features, generate the candidates and use the ranker to eventually create a 
+  submission file to submit to [kaggle](https://www.kaggle.com/competitions/h-and-m-personalized-fashion-recommendations/submissions).
 
 ## Acknowledgments
 Sources used:
