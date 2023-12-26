@@ -1,7 +1,6 @@
-import numpy as np
 from sklearn.base import clone
-from scipy.stats import rankdata
 from rankers.Ranker import Ranker
+import pandas as pd
 
 class Bagger():
     '''
@@ -74,7 +73,7 @@ class Bagger():
                 
         return self
     
-    def predict(self, test_x):
+    def predict(self, test_x, columns_to_use, aggregation="sum"):
         '''
         Ranks each of the given samples according to the average score given by each of the base rankers.
 
@@ -85,10 +84,40 @@ class Bagger():
             The array of average rankings where each ranking corresponds to the sample at the same index in test_x.
         '''
 
-        preds = np.zeros(len(test_x.index))
+        #making predictions per ranker
         for i in range(self.nr_rankers):
-            preds += self.rankers[i].predict(test_x)
-        preds /= self.nr_rankers
+            test_x[f"ranker{i}"] = self.rankers[i].predict(test_x[columns_to_use])
+            test_x[f"ranker{i}"] = test_x.groupby(['week', 'customer_id'])[f"ranker{i}"].rank()              #rankings for each customer, per week
 
-        return rankdata(preds)
+        
+        #different aggregation methods
+        
+        #avg and sum give the same overall rankings
+        if aggregation == "avg" or aggregation == "sum":
+            test_x["preds"] = test_x[[f"ranker{i}" for i in range(self.nr_rankers)]].sum(axis=1)
+        
+        elif aggregation == "prod":
+            test_x["preds"] = test_x[[f"ranker{i}" for i in range(self.nr_rankers)]].product(axis=1)
 
+        elif aggregation == "interleaf":
+            if self.nr_rankers == 1:
+                test_x["preds"] = test_x["ranker0"]
+
+            else:
+                test_x.drop(["preds"], axis=1, errors="ignore", inplace=True)        #dropping "preds" column if already exists from previous run
+
+                dfs = [test_x[['article_id', 'customer_id', f'ranker{i}']].copy().sort_values(by=['customer_id', f'ranker{i}'], ascending=False).reset_index() for i in range(self.nr_rankers)]
+                
+                interleaved = pd.concat([df[['article_id', 'customer_id']] for df in dfs]).sort_index().reset_index(drop=True)
+
+                interleaved = interleaved.drop_duplicates(subset=['customer_id', 'article_id'], keep='first').reset_index()
+
+                interleaved['preds'] = interleaved.groupby('customer_id')['index'].rank(method="dense", ascending=False)
+
+                test_x = pd.merge(test_x, interleaved[['customer_id', 'article_id', 'preds']], on=['customer_id', 'article_id'], how='left')
+
+
+          
+        test_x["preds"] = test_x.groupby(['week', 'customer_id'])["preds"].rank()                      #rankings for each customer, per week
+
+        return test_x["preds"].to_numpy()           #converted to numpy so it can be added to df with the correct name
