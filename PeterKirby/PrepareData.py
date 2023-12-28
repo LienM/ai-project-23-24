@@ -4,7 +4,9 @@ import pandas as pd
 #prepare_data does all the data preparation stage (from Radek's notebook)
 def prepare_data(kaggle_submission=True, nr_training_weeks=10):
     '''
-    Function to prepare the data in the same manner as Radek's notebook
+    Function to generate candidates and prepare the training and test data.
+    Taken from Radek's notebook and put into a function for ease of use.
+    
     Parameters:
         kaggle_submission (boolean): If true, select training data to include the final week - test data is candidates from final+1 week. If false, training data is taken from weeks up to final-1 - test data is the final week.
         nr_training_weeks (int): the number of weeks return for training data. Default is 10 (as per Radek's notebook).
@@ -14,7 +16,7 @@ def prepare_data(kaggle_submission=True, nr_training_weeks=10):
         test (pandas.DataFrame): dataframe of the test data (candidates)
         train_baskets (numpy.array): array of the numbers of samples per training basket (grouped by weeks) 
         bestsellers_previous_week (pandas.DataFrame): dataframe of candidate bestsellers for the previous week
-          all_transactions[all_transactions.week == test_week]
+        test_week_transactions (pandas.DataFrame): dataframe containing the actual transactions of the test week (only if kaggle_submission=False)
 
     '''
 
@@ -107,7 +109,7 @@ def prepare_data(kaggle_submission=True, nr_training_weeks=10):
 
     #Combining transactions and candidates/negative examples
 
-    transactions['purchased'] = 1
+    transactions['purchased'] = 1                                   #this cell produces a warning, but can be ignored as we use "transactions" slice to produce the returned dataframe
 
 
     data = pd.concat([transactions, candidates_last_purchase, candidates_bestsellers])
@@ -145,11 +147,12 @@ def prepare_data(kaggle_submission=True, nr_training_weeks=10):
 
     train_baskets = train.groupby(['week', 'customer_id'])['article_id'].count().values
 
+    test_week_transactions = all_transactions[all_transactions.week == test_week]
 
     if kaggle_submission:
         return train, test, train_baskets, bestsellers_previous_week
     
     else:
-        return train, test, train_baskets, bestsellers_previous_week, all_transactions[all_transactions.week == test_week]
+        return train, test, train_baskets, bestsellers_previous_week, test_week_transactions
 
 
