@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-
+import matplotlib.pyplot as plt
 
 def get_purchases(transactions):
     """
@@ -150,9 +150,9 @@ class ItemCF:
                                                           (error * self.customers_latent_matrix[customer_index] - \
                                                            self.lmbda * self.articles_latent_matrix[article_index])
         mean_loss = total_loss / len(self.training_indices)
-        print(mean_loss)
+        return mean_loss
 
-    def fit(self, n_epochs=10, learning_rate=0.01, lmbda=0.1):
+    def fit(self, n_epochs=10, learning_rate=0.001, lmbda=0.1):
         """ Compute the matrix factorization R = P x Q """
         self.learning_rate = learning_rate
         self.lmbda = lmbda
@@ -163,14 +163,25 @@ class ItemCF:
                                                         size=(len(np.unique(self.customers)), self.num_components))
         self.articles_latent_matrix = np.random.normal(scale=1.,
                                                        size=(len(np.unique(self.articles)), self.num_components))
-
+        losses = []
         for epoch in range(n_epochs):
-            print('Epoch: {}'.format(epoch))
+            print('\rEpoch: {}'.format(epoch))
             self.training_indices = np.arange(n_samples)
 
             # Shuffle training samples and follow stochastic gradient descent
             np.random.shuffle(self.training_indices)
-            self.__sdg__()
+            losses.append(self.__sdg__())
+        # Creating a scatter plot
+        plt.figure(figsize=(10, 6))
+        plt.plot(losses)
+        plt.xlabel('Epochs')
+        plt.ylabel('Loss')
+        plt.title('Loss function')
+        plt.grid()
+        plt.show()
+
+        # Show the plot
+        plt.show()
 
     def predict(self, customer_index, article_index):
         """ Make a prediction for a specific user and article """
