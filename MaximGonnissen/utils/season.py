@@ -123,6 +123,13 @@ class Season:
         self.season_length = self.end_doy.distance_from(self.start_doy)
         self.max_score_day = self.start_doy + self.max_score_offset
 
+    def set_max_score_offset(self, max_score_offset: int):
+        self.max_score_offset = max_score_offset
+        self.max_score_day = self.start_doy + self.max_score_offset
+
+    def set_max_score_day_range(self, max_score_day_range: int):
+        self.max_score_day_range = max_score_day_range
+
     def __str__(self):
         return self.season_name
 
