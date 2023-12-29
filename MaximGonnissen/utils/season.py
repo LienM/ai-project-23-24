@@ -86,9 +86,6 @@ class CalendarDay:
             raise TypeError(f'Cannot subtract CalendarDay from {type(other)}.')
 
     def days_until(self, other) -> int:
-        if not isinstance(other, CalendarDay):
-            raise TypeError(f'Cannot calculate days between CalendarDay and {type(other)}.')
-
         if self.doy == other.doy:
             return 0
         elif self.doy > other.doy:
@@ -97,9 +94,6 @@ class CalendarDay:
             return other.doy - self.doy
 
     def distance_from(self, other) -> int:
-        if not isinstance(other, CalendarDay):
-            raise TypeError(f'Cannot calculate days between CalendarDay and {type(other)}.')
-
         return min(self.days_until(other), other.days_until(self))
 
 
@@ -107,6 +101,9 @@ class Season:
     """
     Season class that holds information about a season.
     """
+    max_score_day_range = 30
+    max_score_offset = 0
+
     def __init__(self, season_name: str, start_doy: CalendarDay, end_doy: CalendarDay):
         """
         :param season_name: Season name
@@ -114,15 +111,24 @@ class Season:
         :param end_doy: End day of year
         """
         self.season_name = season_name
+
         if isinstance(start_doy, int):
             start_doy = CalendarDay(start_doy)
         self.start_doy = start_doy
+
         if isinstance(end_doy, int):
             end_doy = CalendarDay(end_doy)
         self.end_doy = end_doy
 
-    def max_score_day(self, max_score_offset: int) -> CalendarDay:
-        return self.start_doy + max_score_offset
+        self.season_length = self.end_doy.distance_from(self.start_doy)
+        self.max_score_day = self.start_doy + self.max_score_offset
+
+    def set_max_score_offset(self, max_score_offset: int):
+        self.max_score_offset = max_score_offset
+        self.max_score_day = self.start_doy + self.max_score_offset
+
+    def set_max_score_day_range(self, max_score_day_range: int):
+        self.max_score_day_range = max_score_day_range
 
     def __str__(self):
         return self.season_name
@@ -143,41 +149,38 @@ class Season:
     def __hash__(self):
         return hash(self.season_name)
 
-    def season_length(self) -> int:
-        """
-        Returns the length of the season in days.
-        :return: Length of the season in days.
-        """
-        return self.start_doy.distance_from(self.end_doy)
-
     def in_season(self, date: pd.Timestamp) -> bool:
         """
         Checks if a date is in the season.
         :param date: Date to check
         :return: True if date is in season, False otherwise.
         """
-        date_doy = date.dayofyear
-        calendar_day = CalendarDay(date_doy)
-        return calendar_day.days_until(self.end_doy) <= self.season_length()
+        return CalendarDay(date.dayofyear).days_until(self.end_doy) <= self.season_length
 
-    def get_season_score(self, date: pd.Timestamp, max_score_offset: int, max_score_day_range: int) -> float:
+    def get_season_score(self, date: pd.Timestamp) -> float:
         """
         Returns the season score of the item for the given date.
         :param date: Date to get season score for.
-        :param max_score_offset: Offset from start of season to max score day.
-        :param max_score_day_range: Range of days around max score day to calculate score for.
         :return: Season score for given date.
         """
-        date_doy = date.dayofyear
-        calendar_day = CalendarDay(date_doy)
-        distance_from = calendar_day.distance_from(self.max_score_day(max_score_offset))
-        score = max(0, max_score_day_range - distance_from)
-        return score
+        return max(0, (self.max_score_day_range * 2) - CalendarDay(date.dayofyear).distance_from(self.max_score_day + self.max_score_day_range))
 
 
-seasons = [
-    Season('spring', 60, 151),
-    Season('summer', 152, 243),
-    Season('fall', 244, 334),
-    Season('winter', 335, 59)
-]
+class Seasons:
+    seasons = [
+        Season('spring', 60, 151),
+        Season('summer', 152, 243),
+        Season('fall', 244, 334),
+        Season('winter', 335, 59)
+    ]
+
+    @classmethod
+    def get_season(cls, date: pd.Timestamp) -> Season:
+        """
+        Returns the season for a given date.
+        :param date: Date to get season for.
+        :return: Season for given date.
+        """
+        for season in cls.seasons:
+            if season.in_season(date):
+                return season
