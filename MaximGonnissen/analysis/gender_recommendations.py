@@ -4,16 +4,14 @@ from io import BytesIO
 from features.add_gender import add_gender
 from pruning.prune_outdated_items import prune_outdated_items
 from selection.get_most_popular_gendered_items import get_most_popular_gendered_items
-from utils.utils import load_data_from_hnm, DataFileNames, get_data_path
+from utils.utils import DataFileNames, get_data_path, get_all_dataframes
 
 
 def generate_gender_recommendations():
-    articles_df = load_data_from_hnm(DataFileNames.ARTICLES.replace('.csv', '.parquet'), True,
-                                     dtype={'article_id': str})
-    transactions_df = load_data_from_hnm(DataFileNames.TRANSACTIONS_TRAIN.replace('.csv', '.parquet'), True,
-                                         dtype={'article_id': str})
-    sample_submission_df = load_data_from_hnm(DataFileNames.SAMPLE_SUBMISSION.replace('.csv', '.parquet'))
-    customers_df = load_data_from_hnm(DataFileNames.CUSTOMERS.replace('.csv', '.parquet'))
+    """
+    Generate top-12 gendered recommendations for customers, based on predicted article and customer gender information.
+    """
+    articles_df, customers_df, transactions_df, submissions_df = get_all_dataframes()
 
     customers_df['gender'] = add_gender(customers_df, transactions_df, articles_df)
 
@@ -22,7 +20,7 @@ def generate_gender_recommendations():
     most_popular_m_items, most_popular_f_items, most_popular_u_items = get_most_popular_gendered_items(articles_df,
                                                                                                        transactions_df)
 
-    submission_df = sample_submission_df.copy()
+    submission_df = submissions_df.copy()
 
     submission_df = submission_df.merge(customers_df[['customer_id', 'gender']], on='customer_id')
 
