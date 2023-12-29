@@ -1,0 +1,49 @@
+{
+    "title": "Recommendations using specific types of embedding",
+    "y-axis": "Score",
+    "embeddings":
+    [
+        "baseline",
+        "plain",
+        "descriptive",
+        "elaborative",
+        "plain average",
+        "descriptive average",
+        "elaborative average",
+        "image",
+        "concatenated"
+    ],
+    "submissions":
+    [
+        {
+            "label": 104,
+            "scores":
+            [
+                0.025080605661718477,
+                0.002661550323226012,
+                0.0026303034621545916,
+                0.0026880948298163266,
+                0.0029882516573240753,
+                0.002810966063604121,
+                0.002837631340666684,
+                0.002358322486182535,
+                0.0019900410717648186
+            ]
+        },
+        {
+            "label": 105,
+            "scores":
+            [
+                0.02087,
+                0.00231,
+                0.00205,
+                0.00232,
+                0.00247,
+                0.00218,
+                0.00244,
+                0.00175,
+                0.00174
+            ]
+        }
+    ]
+}

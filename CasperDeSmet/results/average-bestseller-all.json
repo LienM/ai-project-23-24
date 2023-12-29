@@ -1,0 +1,34 @@
+{
+    "title": "Recommendations for week 104 using specific type of embedding",
+    "y-axis": "Average Bestseller Rank",
+    "embeddings":
+    [
+        "baseline",
+        "text plain",
+        "text descriptive",
+        "text elaborative",
+        "text plain average",
+        "text descriptive average",
+        "text elaborative average",
+        "image",
+        "concatenated"
+    ],
+    "submissions":
+    [
+        {
+            "label": 104,
+            "scores":
+            [
+                46.001083734836705,
+                263.1638017255722,
+                263.1953711369343,
+                263.8022146985558,
+                261.8653837618732,
+                262.3572721762008,
+                262.2798266652607,
+                263.1081233349946,
+                262.6933628555221
+            ]
+        }
+    ]
+}
