@@ -1,0 +1,34 @@
+{
+    "title": "Recommendations using specific types of embedding",
+    "y-axis": "Recall",
+    "embeddings":
+    [
+        "baseline",
+        "plain",
+        "descriptive",
+        "elaborative",
+        "plain average",
+        "descriptive average",
+        "elaborative average",
+        "image",
+        "concatenated"
+    ],
+    "submissions":
+    [
+        {
+            "label": 104,
+            "scores":
+            [
+                0.050023692224558845,
+                0.004792798682462355,
+                0.005156421484626903,
+                0.004974840250357991,
+                0.005501204882207673,
+                0.00539605569123474,
+                0.005469688229976411,
+                0.0034448756405003923,
+                0.00312851414087636
+            ]
+        }
+    ]
+}
