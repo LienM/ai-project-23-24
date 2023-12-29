@@ -1,0 +1,44 @@
+{
+    "title": "Recommendations for week 104 using\nvarious PCA dimensionality reduction sizes",
+    "y-axis": "Recall",
+    "embeddings":
+    [
+        "baseline",
+        "text plain average",
+        "image",
+        "concatenated"
+    ],
+    "submissions":
+    [
+        {
+            "label": "700",
+            "scores":
+            [
+                0.050023692224558845,
+                0.005501204882207673,
+                0.0034448756405003923,
+                0.00312851414087636
+            ]
+        },
+        {
+            "label": "100",
+            "scores":
+            [
+                0.050023692224558845,
+                0.004196718597790843,
+                0.0026048839273265746,
+                0.002609875644347406
+            ]
+        },
+        {
+            "label": "10",
+            "scores":
+            [
+                0.050023692224558845,
+                0.002250322884391483,
+                0.0014419881357659362,
+                0.0014920713775968364
+            ]
+        }
+    ]
+}

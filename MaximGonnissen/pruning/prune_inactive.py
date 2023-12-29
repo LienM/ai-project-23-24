@@ -29,7 +29,7 @@ def prune_inactive(customers_df: pd.DataFrame) -> pd.DataFrame:
     :param customers_df: DataFrame containing customer information
     :return: DataFrame containing only active customers
     """
-    customers_df = remove_active_nulls(customers_df)
+    # customers_df = remove_active_nulls(customers_df)  # --> Removes significant amount of customers
     customers_df = remove_active_pre_create(customers_df)
 
     return customers_df

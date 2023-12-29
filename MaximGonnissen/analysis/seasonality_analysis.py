@@ -1,18 +1,19 @@
 import datetime
-import time
-from pathlib import Path
-from typing import Union
-from io import BytesIO
-import zipfile
 import json
 import multiprocessing as mp
-
-from utils.season import Season, seasons
-from utils.utils import DataFileNames, load_data_from_hnm, get_data_path, load_data, ProjectConfig
-from utils.progress_bar import ProgressBar
-from utils.kaggle_tool import KaggleTool
+import time
+import zipfile
+from io import BytesIO
+from pathlib import Path
+from typing import Union
 
 import pandas as pd
+
+from pruning.prune_outdated_items import prune_outdated_items
+from utils.kaggle_tool import KaggleTool
+from utils.progress_bar import ProgressBar
+from utils.season import Season, seasons
+from utils.utils import DataFileNames, load_data_from_hnm, get_data_path, load_data, ProjectConfig
 
 
 def get_season(date: pd.Timestamp) -> Season:
@@ -148,14 +149,22 @@ def predict_top_items(df: pd.DataFrame) -> list:
     return sorted(item_scores, key=item_scores.get, reverse=True)[:len(df['items'].iloc[0].split(' '))]
 
 
-def _run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, rerun_seasonal_scores: bool,
-                          to_csv: bool = True, verbose: bool = True, submission_suffix: str = None) -> Union[
-    Path, BytesIO]:
+def _run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, rerun_seasonal_scores: bool = True,
+                           rerun_all: bool = False, to_csv: bool = True, verbose: bool = True,
+                           submission_suffix: str = None, do_prune_outdated_items: bool = True) -> Union[Path, BytesIO]:
     # Output paths
     seasonal_scores_path = get_data_path() / DataFileNames.OUTPUT_DIR / 'seasonal_scores.csv'
     article_sales_per_date_path = get_data_path() / DataFileNames.OUTPUT_DIR / 'article_sales_per_date.csv'
     seasonal_sales_path = get_data_path() / DataFileNames.OUTPUT_DIR / 'seasonal_sales.csv'
     top_seasonal_sales_path = get_data_path() / DataFileNames.OUTPUT_DIR / 'top_seasonal_sales.csv'
+
+    transactions_df = load_data_from_hnm(DataFileNames.TRANSACTIONS_TRAIN.replace('.csv', '.parquet'), verbose,
+                                         dtype={'article_id': str})
+    articles_df = load_data_from_hnm(DataFileNames.ARTICLES.replace('.csv', '.parquet'), verbose,
+                                     dtype={'article_id': str})
+
+    if do_prune_outdated_items:
+        articles_df, transactions_df = prune_outdated_items(articles_df, transactions_df, cutoff_days=365)
 
     if verbose:
         print(f"Script started at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.")
@@ -163,11 +172,9 @@ def _run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, reru
             f"Using season parameters: max_score_offset={max_score_offset}, max_score_day_range={max_score_day_range}.")
 
     article_sales_per_date_df = None
-    if not article_sales_per_date_path.exists():
-        transactions_train = load_data_from_hnm(DataFileNames.TRANSACTIONS_TRAIN, verbose, dtype={'article_id': str})
-
+    if not article_sales_per_date_path.exists() or rerun_all:
         # Calculate sales per date for each article
-        article_sales_per_date_df = article_sales_per_date(transactions_train)
+        article_sales_per_date_df = article_sales_per_date(transactions_df)
 
         if to_csv:
             article_sales_per_date_df.to_csv(article_sales_per_date_path, index=False)
@@ -175,7 +182,7 @@ def _run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, reru
         article_sales_per_date_df = load_data(article_sales_per_date_path, verbose, dtype={'article_id': str})
 
     seasonal_sales_df = None
-    if not seasonal_sales_path.exists():
+    if not seasonal_sales_path.exists() or rerun_all:
         # Calculate seasonal sales numbers for each article
         seasonal_sales_df = calculate_seasonal_sales(article_sales_per_date_df)
 
@@ -185,7 +192,7 @@ def _run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, reru
         seasonal_sales_df = load_data(seasonal_sales_path, verbose, dtype={'article_id': str})
 
     seasonal_scores_df = None
-    if not seasonal_scores_path.exists() or rerun_seasonal_scores:
+    if not seasonal_scores_path.exists() or rerun_seasonal_scores or rerun_all:
         # Calculate seasonal scores for each article
         seasonal_scores_df = calculate_season_scores(article_sales_per_date_df, max_score_offset, max_score_day_range,
                                                      verbose=verbose)
@@ -196,7 +203,7 @@ def _run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, reru
         seasonal_scores_df = load_data(seasonal_scores_path, verbose, dtype={'article_id': str})
 
     top_seasonal_sales_df = None
-    if not top_seasonal_sales_path.exists() or rerun_seasonal_scores:
+    if not top_seasonal_sales_path.exists() or rerun_seasonal_scores or rerun_all:
         # Calculate top seasonal sales
         top_seasonal_sales_df = calculate_top_sales(seasonal_scores_df, ProjectConfig.DATA_END,
                                                     ProjectConfig.DATA_END + datetime.timedelta(days=7))
@@ -216,7 +223,7 @@ def _run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, reru
 
     if to_csv:
         output = get_data_path() / DataFileNames.OUTPUT_DIR / (
-                    'submission' + (f'_{submission_suffix}' if submission_suffix else '') + '.csv')
+                'submission' + (f'_{submission_suffix}' if submission_suffix else '') + '.csv')
     else:
         output = BytesIO()
 
@@ -240,18 +247,22 @@ def already_ran_for(score_offset: int, day_range: int, kaggle_tool: KaggleTool):
     return False
 
 
-def run_seasonal_analysis(max_score_offset: int, max_score_day_range: int):
+def run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, check_already_ran: bool = False,
+                          rerun_seasonal_scores: bool = True, rerun_all: bool = False, do_prune_outdated_items: bool = True):
     kaggle_tool = KaggleTool('h-and-m-personalized-fashion-recommendations')
 
-    if already_ran_for(max_score_offset, max_score_day_range, kaggle_tool):
-        print(
-            f'> Already ran analysis for max_score_offset={max_score_offset} and max_score_day_range={max_score_day_range}.')
-        return
+    if check_already_ran:
+        if already_ran_for(max_score_offset, max_score_day_range, kaggle_tool):
+            print(
+                f'> Already ran analysis for max_score_offset={max_score_offset} and max_score_day_range={max_score_day_range}.')
+            return
 
     print(f'> Running analysis for max_score_offset={max_score_offset} and max_score_day_range={max_score_day_range}.')
 
     start_time = time.time()
-    output_bytes = _run_seasonal_analysis(max_score_offset, max_score_day_range, True, verbose=False, to_csv=False)
+    output_bytes = _run_seasonal_analysis(max_score_offset, max_score_day_range,
+                                          rerun_seasonal_scores=rerun_seasonal_scores, rerun_all=rerun_all,
+                                          verbose=False, to_csv=False, do_prune_outdated_items=do_prune_outdated_items)
 
     print(
         f'> Finished analysis for max_score_offset={max_score_offset} and max_score_day_range={max_score_day_range} in {time.time() - start_time} seconds.')

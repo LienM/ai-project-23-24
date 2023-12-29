@@ -1,14 +1,9 @@
 import multiprocessing as mp
+import time
 
 from analysis.seasonality_analysis import run_seasonal_analysis_parallel, run_seasonal_analysis
-from pruning.prune_outdated_items import prune_outdated_items
-from selectors.get_most_popular_gendered_items import get_most_popular_gendered_items
-from utils.utils import load_data_from_hnm, DataFileNames, get_data_path
 from utils.convert_to_parquet import convert_to_parquet
-from features.add_gender import add_gender
-
-from io import BytesIO
-import zipfile
+from utils.utils import DataFileNames, get_data_path
 
 
 def get_seasonality_combinations():
@@ -34,38 +29,6 @@ def seasonal_analysis():
             run_seasonal_analysis(*combination)
 
 
-def generate_gender_recommendations():
-    articles_df = load_data_from_hnm(DataFileNames.ARTICLES.replace('.csv', '.parquet'), True, dtype={'article_id': str})
-    transactions_df = load_data_from_hnm(DataFileNames.TRANSACTIONS_TRAIN.replace('.csv', '.parquet'), True, dtype={'article_id': str})
-    sample_submission_df = load_data_from_hnm(DataFileNames.SAMPLE_SUBMISSION.replace('.csv', '.parquet'))
-    customers_df = load_data_from_hnm(DataFileNames.CUSTOMERS.replace('.csv', '.parquet'))
-
-    customers_df['gender'] = add_gender(customers_df, transactions_df, articles_df)
-
-    articles_df, transactions_df = prune_outdated_items(articles_df, transactions_df)
-
-    most_popular_m_items = get_most_popular_gendered_items(articles_df, True)
-    most_popular_f_items = get_most_popular_gendered_items(articles_df, False)
-
-    submission_df = sample_submission_df.copy()
-
-    submission_df = submission_df.merge(customers_df[['customer_id', 'gender']], on='customer_id')
-    submission_df.loc[submission_df.gender == 'm', 'prediction'] = " ".join(most_popular_m_items)
-    submission_df.loc[submission_df.gender == 'u', 'prediction'] = " ".join(most_popular_m_items)
-    submission_df.loc[submission_df.gender == 'f', 'prediction'] = " ".join(most_popular_f_items)
-
-    submission_df.drop('gender', axis=1, inplace=True)
-
-    output_path = get_data_path() / DataFileNames.OUTPUT_DIR / DataFileNames.ZIP_DIR
-
-    submission_bytes = BytesIO()
-
-    submission_df.to_csv(submission_bytes, index=False)
-
-    with zipfile.ZipFile(output_path / 'submission.zip', 'w') as m_zip:
-        m_zip.writestr('submission.csv', submission_bytes.getvalue())
-
-
 def convert_all_to_parquet():
     data_path = get_data_path() / DataFileNames.HNM_DIR
 
@@ -76,4 +39,9 @@ def convert_all_to_parquet():
 
 
 if __name__ == '__main__':
-    pass
+    print('Starting script at', time.strftime("%H:%M:%S", time.localtime()))
+
+    # Plot pruning
+    run_seasonal_analysis(-30, 60, rerun_all=True, do_prune_outdated_items=True)
+
+    print('Finished script at', time.strftime("%H:%M:%S", time.localtime()))

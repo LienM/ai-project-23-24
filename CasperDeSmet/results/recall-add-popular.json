@@ -1,0 +1,24 @@
+{
+    "title": "Recommendations for week 104\nusing text plain average embeddings",
+    "y-axis": "Recall",
+    "embeddings":
+    [
+        "add no popular items",
+        "add 5 popular items",
+        "add 12 popular items",
+        "add 20 popular items"
+    ],
+    "submissions":
+    [
+        {
+            "label": "recall",
+            "scores":
+            [
+                0.0029882516573240753,
+                0.002900091005910245,
+                0.0015004785881216733,
+                0.0012900962317640668
+            ]
+        }
+    ]
+}
