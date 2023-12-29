@@ -1,10 +1,13 @@
+import matplotlib.pyplot as plt
+
 from features.add_gender import add_gender
 from utils.utils import load_data_from_hnm, DataFileNames
 
 
-def plot_genders():
-    import matplotlib.pyplot as plt
-
+def plot_genders() -> None:
+    """
+    Plots male, female, and unknown customer counts as a bar chart.
+    """
     articles_df = load_data_from_hnm(DataFileNames.ARTICLES.replace('.csv', '.parquet'), True,
                                      dtype={'article_id': str})
     transactions_df = load_data_from_hnm(DataFileNames.TRANSACTIONS_TRAIN.replace('.csv', '.parquet'), True,
