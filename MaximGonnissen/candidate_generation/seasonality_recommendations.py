@@ -52,14 +52,16 @@ def predict_top_seasonal_items(seasonal_sales_df: pd.DataFrame) -> list:
     return sorted(item_scores, key=item_scores.get, reverse=True)[:len(seasonal_sales_df['items'].iloc[0].split(' '))]
 
 
-def _run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, to_csv: bool = True, verbose: bool = True,
-                           submission_suffix: str = None, do_prune_outdated_items: bool = True) -> Union[Path, BytesIO]:
+def _run_seasonal_recommendations(max_score_offset: int, max_score_day_range: int, to_csv: bool = True,
+                                  verbose: bool = True, submission_suffix: str = None,
+                                  do_prune_outdated_items: bool = True) -> Union[Path, BytesIO]:
     """
-    Runs seasonal analysis for a given set of parameters.
+    Runs seasonal recommendations for a given set of parameters.
     :param max_score_offset: Offset from start of season to max score day. (Note that this should be negative to be *before* the season starts)
     :param max_score_day_range: Range of days around max score day to calculate score for.
     :param to_csv: Whether to save the submission to a csv file.
     :param verbose: Whether to run all calculations verbose.
+    :param submission_suffix: Suffix to add to the submission file name.
     :param do_prune_outdated_items: Whether to prune outdated items.
     :return: Path to the submission csv file if to_csv is True, else the BytesIO object containing the csv file.
     """
@@ -105,11 +107,11 @@ def _run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, to_c
 
 def already_ran_for(score_offset: int, day_range: int, kaggle_tool: KaggleTool) -> bool:
     """
-    Checks if the analysis already ran for the given parameters.
+    Checks if the recommendations already ran for the given parameters.
     :param score_offset: Offset from start of season to max score day.
     :param day_range: Range of days around max score day to calculate score for.
     :param kaggle_tool: KaggleTool object to use for checking submissions.
-    :return: Whether the analysis already ran for the given parameters.
+    :return: Whether the recommendations already ran for the given parameters.
     """
     submissions = kaggle_tool.list_submissions_wrapped()
 
@@ -124,14 +126,14 @@ def already_ran_for(score_offset: int, day_range: int, kaggle_tool: KaggleTool) 
     return False
 
 
-def run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, check_already_ran: bool = False,
-                          do_prune_outdated_items: bool = True, submit_to_kaggle: bool = True,
-                          keep_zip: bool = False) -> Optional[BytesIO]:
+def run_seasonal_recommendations(max_score_offset: int, max_score_day_range: int, check_already_ran: bool = False,
+                                 do_prune_outdated_items: bool = True, submit_to_kaggle: bool = True,
+                                 keep_zip: bool = False) -> Optional[BytesIO]:
     """
-    Runs seasonal analysis for a given set of parameters. Optionally uploads the results to Kaggle.
+    Runs seasonal recommendations for a given set of parameters. Optionally uploads the results to Kaggle.
     :param max_score_offset: Offset from start of season to max score day.
     :param max_score_day_range: Range of days around max score day to calculate score for.
-    :param check_already_ran: Whether to check Kaggle submissions if the analysis already ran for the given parameters.
+    :param check_already_ran: Whether to check Kaggle submissions if the recommendations already ran for the given parameters.
     :param do_prune_outdated_items: Whether to prune outdated items.
     :param submit_to_kaggle: Whether to submit the results to Kaggle.
     :param keep_zip: Whether to keep the zip file.
@@ -142,29 +144,30 @@ def run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, check
     if check_already_ran:
         if already_ran_for(max_score_offset, max_score_day_range, kaggle_tool):
             print(
-                f'> Already ran analysis for max_score_offset={max_score_offset} and max_score_day_range={max_score_day_range}.')
+                f'> Already ran recommendations for max_score_offset={max_score_offset} and max_score_day_range={max_score_day_range}.')
             return None
 
-    print(f'> Running analysis for max_score_offset={max_score_offset} and max_score_day_range={max_score_day_range}.')
+    print(
+        f'> Running recommendations for max_score_offset={max_score_offset} and max_score_day_range={max_score_day_range}.')
 
     start_time = time.time()
-    output_bytes = _run_seasonal_analysis(max_score_offset, max_score_day_range, verbose=False, to_csv=False,
-                                          do_prune_outdated_items=do_prune_outdated_items)
+    output_bytes = _run_seasonal_recommendations(max_score_offset, max_score_day_range, verbose=False, to_csv=False,
+                                                 do_prune_outdated_items=do_prune_outdated_items)
 
     print(
-        f'> Finished analysis for max_score_offset={max_score_offset} and max_score_day_range={max_score_day_range} in {time.time() - start_time} seconds.')
+        f'> Finished recommendations for max_score_offset={max_score_offset} and max_score_day_range={max_score_day_range} in {time.time() - start_time} seconds.')
 
     if not (submit_to_kaggle or keep_zip):
         return output_bytes
 
     print(f'> Zipping output')
-    zip_path = get_data_path() / DataFileNames.OUTPUT_DIR / DataFileNames.ZIP_DIR / f'seasonal_analysis_{max_score_offset}_{max_score_day_range}.zip'
+    zip_path = get_data_path() / DataFileNames.OUTPUT_DIR / DataFileNames.ZIP_DIR / f'seasonal_recommendations_{max_score_offset}_{max_score_day_range}.zip'
 
     if not zip_path.parent.exists():
         zip_path.parent.mkdir(parents=True)
 
     with zipfile.ZipFile(zip_path, 'w') as zip_file:
-        zip_file.writestr('seasonal_analysis.csv', output_bytes.getvalue())
+        zip_file.writestr('seasonal_recommendations.csv', output_bytes.getvalue())
 
     if submit_to_kaggle:
         print(f'> Uploading output to Kaggle')
