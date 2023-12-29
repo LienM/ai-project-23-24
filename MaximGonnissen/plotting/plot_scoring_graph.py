@@ -2,6 +2,9 @@ import matplotlib.pyplot as plt
 
 
 class Result:
+    """
+    Class to store the results of a seasonality submission.
+    """
     def __init__(self, private_score: float, public_score: float, day_offset: int, day_range: int = 30):
         self.private_score = private_score
         self.public_score = public_score
