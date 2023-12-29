@@ -1,9 +1,10 @@
-seaborn
-tqdm
-grpcio
 matplotlib
-pandas
+seaborn
 numpy
-scikit-learn
 pyarrow
-turicreate
+pandas
+scikit-learn
+lightgbm
+notebook
+tqdm
+kaggle

@@ -2,7 +2,12 @@ import pandas as pd
 
 
 def bestseller_rank_feature(transactions: pd.DataFrame, reference_week):
-    """Determines how high on the bestseller list a product was when it was bought."""
+    """
+    Determine the weekly bestseller rank for every product and add it to the transactions DataFrame.
+
+    :param transactions: (filtered) transactions dataframe
+    :return: transactions with bestseller rank
+    """
     # Gets the weeks when the customers have bought a product
     customer_weekly_purchase_activity = transactions.groupby('customer_id')['week'].unique()
 

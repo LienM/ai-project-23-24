@@ -1,12 +1,19 @@
 from config import VERBOSE
-from util import filter_feature_data
-
 from lightgbm.sklearn import LGBMRanker
+import logging
+
 
 def train_ranker(train, available_features, config):
+    """
+    Train the LGBM model on the train data
+    :param train: Train data
+    :param available_features: Available features to train on
+    :param config: Configuration dictionary
+    :return: Trained ranker model for predicting scores
+    """
     # Gives amount of items purchased per customer per week (used for training the ranker)
     train_bins = train.groupby(["week", "customer_id"])["article_id"].count().values
-    train_X = filter_feature_data(train, available_features)
+    train_X = train[available_features]
     train_y = train["bought"]
 
     ranker = LGBMRanker(
@@ -32,10 +39,10 @@ def score_candidates(test, available_features, ranker):
     :param available_features: Available features to predict on (must be identical to the ones used in train_ranker)
     :return: Test candidates with score field added, only identifying features remain
     """
-    test_X = filter_feature_data(test, available_features)
+    test_X = test[available_features]
 
     test["score"] = ranker.predict(test_X)
-    test.sort_values(by=["customer_id", "score"], ascending=[True, False], inplace=True)
+    test.sort_values(by=["customer_id", "score"], ascending=False, inplace=True)
 
     return test[["article_id", "customer_id", "score"]]
 

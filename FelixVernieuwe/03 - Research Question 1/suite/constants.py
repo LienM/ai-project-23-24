@@ -1,3 +1,4 @@
+# Dictionaries for getting shortened notations for all different methods
 base_feature_notation = {
     "article_id": "aid",
     "product_type_no": "ptn",
@@ -19,10 +20,12 @@ base_feature_notation = {
 }
 
 added_feature_notation = {
-    "has_promotion": "hp",
     "weekly_rank": "wr",
     "all_time_rank": "atr",
     "price_sensitivity": "ps",
+    "new_arrival": "na",
+    "has_promotion": "hp",
+    "age_group": "ag",
     "bought": "b",
 }
 

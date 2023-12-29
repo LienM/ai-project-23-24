@@ -2,6 +2,14 @@ import pandas as pd
 
 
 def price_sensitivity_feature(transactions: pd.DataFrame, customers: pd.DataFrame, articles: pd.DataFrame):
+    """
+    Adds the price_sensitivity feature to the customers DataFrame.
+
+    :param transactions: (filtered) transactions dataframe
+    :param customers: customers dataframe
+    :param articles: articles dataframe
+    :return: transactions, customers (with price_sensitivity feature), articles
+    """
     customer_price_ranges = transactions.groupby('customer_id')['price'].agg(['min', 'max'])
     customer_price_ranges['diff'] = customer_price_ranges['max'] - customer_price_ranges['min']
     customer_price_ranges['price_sensitivity'] = pd.qcut(customer_price_ranges['diff'], 5, labels=[0, 1, 2, 3, 4])

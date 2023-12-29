@@ -1,6 +1,8 @@
 def get_buying_customers_candidates(transactions, reference_week):
     """
     Customers are included as candidate customers iff they bought any product
+    :param transactions: Filtered transactions dataframe
+    :param reference_week: Week to use as reference week
     :returns:
         - **candidate_customers** - for every week, all customers who bought a product in that week
         - **ref_week_candidate_customers** - all customers who ever bought a product within entire dataset
@@ -31,6 +33,9 @@ def get_buying_customers_candidates(transactions, reference_week):
 def get_all_customer_candidates(transactions, customers, reference_week):
     """
     All customers in customers dataset are included as candidate customers
+    :param transactions: Filtered transactions dataframe
+    :param customers: Customers dataframe
+    :param reference_week: Week to use as reference week
     :returns:
         - **candidate_customers** - every customer appears in every week
         - **ref_week_candidate_customers** - all customers
@@ -40,7 +45,7 @@ def get_all_customer_candidates(transactions, customers, reference_week):
 
     # Gets all customer_ids from customers dataset, add every customer to every week
     candidate_customers = pd.DataFrame(list(itertools.product(customers['customer_id'].unique(), weeks)), columns=['customer_id', 'week'])
-    # Randomly select channel?
+    # Randomly select channel for every customer
     candidate_customers['channel'] = np.random.randint(1, 3, candidate_customers.shape[0])
 
     ref_week_candidate_customers = candidate_customers.drop_duplicates(subset=['customer_id']).reset_index(drop=True)
@@ -52,6 +57,9 @@ def get_all_customer_candidates(transactions, customers, reference_week):
 def get_missing_customers_candidates(transactions, customers, reference_week):
     """
     Returns all customers that have not bought anything in the entire dataset as candidate customers
+    :param transactions: Filtered transactions dataframe
+    :param customers: Customers dataframe
+    :param reference_week: Week to use as reference week
     :returns:
         - **missing_customers** - all customers that have not bought anything in the entire dataset as candidate customers
     """

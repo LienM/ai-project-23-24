@@ -10,7 +10,7 @@ def candidate_new_arrivals(candidate_customers: pd.DataFrame, all_transactions: 
     :param all_transactions: Transactions in the entire dataset (used for finding relative age of product)
     :param k: Number of new arrivals to add as candidates
     :param max_age: Maximum age of new arrivals to add as candidates
-    :return:
+    :return: New arrivals as potential candidates for every customer that bought a product in given period
     """
 
     first_sale = get_first_sale_products(all_transactions)

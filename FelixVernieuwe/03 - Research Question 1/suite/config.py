@@ -1,23 +1,16 @@
 import os
 import pathlib
 
-
 import logging
 
-logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[
-        logging.FileHandler("debug.log"),
-        logging.StreamHandler()
-    ]
-)
+#  GENERAL NOTE: (un)comment a line to enable/disable it
 
 
 # =============================================================================
 #                              GENERAL CONFIG
 # =============================================================================
 
+# Name and description that should be used for the Kaggle submission
 EXPERIMENT_NAME = "score_experiments"
 EXPERIMENT_DESC = "Feature baseline"
 
@@ -26,18 +19,18 @@ PROFILE_ROOT = os.environ.get("HOME", os.environ.get("USERPROFILE", ""))
 KAGGLE_PATH = pathlib.Path(PROFILE_ROOT, ".kaggle/kaggle.json").as_posix()
 
 # Output additional information
-VERBOSE = True
-
+VERBOSE = False
 
 # =============================================================================
 #                               OUTPUT CONFIG
 # =============================================================================
 
-# Environment variables
+# Output paths
 DATA_PATH = "data/"
 OUTPUT_PATH = "data/submissions/"
 
-SAVE_DATAFRAME = True
+# Whether to generally save the submission to a csv
+SAVE_DATAFRAME = False
 
 # As long as the above folders can't be found, move up one directory
 ctr = 0
@@ -48,34 +41,42 @@ while not os.path.exists(OUTPUT_PATH):
     if ctr > 5:
         raise Exception("Could not find data and output paths.")
 
-
-
 # =============================================================================
 #                              EXPERIMENT CONFIG
 # =============================================================================
 
-# If larger than 0, model will do offline scoring using MAP
-AMOUNT_OF_TEST_WEEKS = 0
+#                    TRAIN WEEKS            TEST WEEKS           TEST OFFSET
+# __________//***********************||+++++++++++++++++++++//_______________||
+# ^ DATA START                 REFERENCE WEEK                       DATA END ^
 
-# How many weeks to train on
-TRAINING_INTERVAL = 3
+
+# For offline evaluation, how many weeks of ground truth candidates can be compared against
+TEST_WEEKS = 0
+
+# For offline evaluation, how many weeks of the data should be excluded from the end
+#   e.g. For TEST_OFFSET = 24, you can test the behaviour of the candidate generation in a different season
+TEST_OFFSET = 0
+
+# For candidate generation, how many weeks of the user's purchase history can be used
+# TODO: Can be extended into different methods
+#    1) Fetch more weeks of the user's purchase history if they are very active customers (reduce computation time)
+#    2) Determine an optimal cut-off point for the training data
+TRAIN_WEEKS = 3
 
 # Features to ignore (exclude from training and evaluation)
 FILTER_BASE_FEATURES = [
 
 ]
 
-
-# UPLOAD_TO_KAGGLE = True
-# INCLUDE_MISSING_CUSTOMERS = False
-
-
 # See contansts.py/all_added_features for all available features
+# Custom features to add
 ADDED_FEATURES = [
     'weekly_rank',
     # 'all_time_rank',
+    # 'price_sensitivity',
+    # 'new_arrival',
     # 'has_promotion',
-    # 'price_sensitivity'
+    # 'age_group',
 ]
 
 # See constants.py/all_candidate_methods for all available candidate generation methods
@@ -87,33 +88,31 @@ REGULAR_CANDIDATE_METHODS = [
     "previous_purchases",
 ]
 
-
 # Candidates to add
-TRAIN_INTERVAL_CANDIDATES = [
-    # "all_time_bestsellers",
-    "weekly_bestsellers",
-    # "age_group_bestsellers",
-    "previous_purchases",
-    # "new_arrivals",
+TRAIN_CANDIDATE_METHODS = [
+    # {"type": "all_time_bestsellers", "k": 20},
+    {"type": "weekly_bestsellers", "k": 12},
+    # {"type": "age_group_bestsellers", "k": 12},
+    # {"type": "new_arrivals", "max_age": 0, "k": 12},
+    # {"type": "previous_purchases", "k": 12},
 ]
 
-REFERENCE_WEEK_CANDIDATES = [
-    # "all_time_bestsellers",
-    "weekly_bestsellers",
-    # "age_group_bestsellers",
-    "previous_purchases",
-    # "new_arrivals",
+TEST_CANDIDATE_METHODS = [
+    # {"type": "all_time_bestsellers", "k": 20},
+    {"type": "weekly_bestsellers", "k": 12},
+    # {"type": "age_group_bestsellers", "k": 12},
+    # {"type": "new_arrivals", "max_age": 0, "k": 12},
+    # {"type": "previous_purchases", "k": 12},
 ]
 
 MISSING_CANDIDATE_METHODS = [
-    "all_time_bestsellers",
-    "weekly_bestsellers",
-    "age_group_bestsellers",
-    "new_arrivals"
+    {"type": "all_time_bestsellers", "k": 12},
+    {"type": "weekly_bestsellers", "k": 12},
+    {"type": "age_group_bestsellers", "k": 12},
+    {"type": "new_arrivals", "max_age": 0, "k": 12},
 ]
 
 MISSING_CANDIDATE_METHOD = MISSING_CANDIDATE_METHODS[1]
-
 
 # Amount of LightGBM estimators
 N_ESTIMATORS = 8
@@ -121,36 +120,17 @@ N_ESTIMATORS = 8
 # Maximum amount of candidates to recommend
 K = 12
 
-
-# Amount of candidates to generate for train set
-K_TRAIN = 12
-
-# Amount of candidates to generate for test set
-K_TEST = 12
-
-# Amount of candidates to generate for missing customers
-K_MISSING = 12
-
 # Minimum accuracy of predictions
-PREDICTION_ACCURACY = 0
-
-# Maximum age of products for candidates of type "new_arrivals"
-MAX_AGE = 0
-
-
-
+PREDICTION_ACCURACY = 0.0
 
 # =============================================================================
 # =============================================================================
 # =============================================================================
-
-
 
 
 DEFAULT_CONFIG = {
     "EXPERIMENT_NAME": EXPERIMENT_NAME,
     "EXPERIMENT_DESC": EXPERIMENT_DESC,
-    "TRAINING_INTERVAL": TRAINING_INTERVAL,
 
     "VERBOSE": VERBOSE,
 
@@ -158,23 +138,33 @@ DEFAULT_CONFIG = {
     "OUTPUT_PATH": OUTPUT_PATH,
     "KAGGLE_PATH": KAGGLE_PATH,
     "SAVE_DATAFRAME": SAVE_DATAFRAME,
+    "SAVE_SCORE": True,
 
-    "AMOUNT_OF_TEST_WEEKS": AMOUNT_OF_TEST_WEEKS,
+    "TRAIN_WEEKS": TRAIN_WEEKS,
+    "TEST_WEEKS": TEST_WEEKS,
+    "TEST_OFFSET": TEST_OFFSET if TEST_WEEKS > 0 else 0,
+
     "FILTER_BASE_FEATURES": FILTER_BASE_FEATURES,
     "ADDED_FEATURES": ADDED_FEATURES,
 
-    "TRAIN_INTERVAL_CANDIDATES": TRAIN_INTERVAL_CANDIDATES,
-    "REFERENCE_WEEK_CANDIDATES": REFERENCE_WEEK_CANDIDATES,
+    "TRAIN_CANDIDATE_METHODS": TRAIN_CANDIDATE_METHODS,
+    "TEST_CANDIDATE_METHODS": TEST_CANDIDATE_METHODS,
     "MISSING_CANDIDATE_METHOD": MISSING_CANDIDATE_METHOD,
 
     "N_ESTIMATORS": N_ESTIMATORS,
 
     "K": K,
-    "K_TRAIN": K_TRAIN,
-    "K_TEST": K_TEST,
-    "K_MISSING": K_MISSING,
-
-    "MAX_AGE": MAX_AGE,
 
     "PREDICTION_ACCURACY": PREDICTION_ACCURACY,
 }
+
+
+logging.basicConfig(
+    level=logging.DEBUG if VERBOSE else logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.FileHandler("debug.log"),
+        logging.StreamHandler()
+    ]
+)
+print = logging.debug

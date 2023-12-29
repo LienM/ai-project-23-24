@@ -24,7 +24,7 @@ def candidate_bestsellers_weekly(candidate_customers: pd.DataFrame, bestsellers_
     # NOTE: since reference week is not in our bestseller dataset, we need to do one of two following actions:
     #   1. Increment all weeks by one (Radek's solution and also current one)
     #   2. For reference week, always select the last week's bestsellers
-    bestsellers_weekly['week'] += 1
+    # -> This is implemented in the bestseller generation proces
     bestsellers_weekly.drop(columns=['rank', 'count'], inplace=True)
 
     # Cross merge
@@ -49,7 +49,7 @@ def candidate_bestsellers_all_time(candidate_customers: pd.DataFrame, bestseller
     return bestseller_candidates
 
 
-def candidate_bestsellers_age_group(candidate_customers: pd.DataFrame, bestsellers_age_group: pd.DataFrame, k=12):
+def candidate_bestsellers_age_group(candidate_customers: pd.DataFrame, customers: pd.DataFrame, bestsellers_age_group: pd.DataFrame, k=12):
     """
     For every candidate customer, add the top k products per age group (for that week) as potential candidates
     :param candidate_customers: Customers that can receive candidates across multiple weeks

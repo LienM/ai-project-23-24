@@ -7,6 +7,14 @@ PROMOTION_THRESHOLD = 0.6
 
 
 def discount_feature(transactions: pd.DataFrame, customers: pd.DataFrame, articles: pd.DataFrame):
+    """
+    Adds the discount feature to the transactions DataFrame.
+
+    :param transactions: (filtered) transactions dataframe
+    :param customers: customers dataframe
+    :param articles:  articles dataframe
+    :return: transactions (with discount feature), customers, articles
+    """
     maximum_product_price = transactions.groupby(['week', 'article_id'])['price'].max().reset_index()
 
     transactions = transactions.merge(maximum_product_price, on=['week', 'article_id'], suffixes=('', '_max'))
@@ -20,13 +28,26 @@ def discount_feature(transactions: pd.DataFrame, customers: pd.DataFrame, articl
     
     
 def plot_weekly_promo_percentage(promoted_articles: pd.DataFrame):
+    """
+    Plots the percentage of products that are discounted per week.
+    :param promoted_articles: transactions dataframe containing the discount information per week
+    :return: None
+    """
     discounted_transactions = promoted_articles.groupby('week')['has_promotion'].mean().reset_index()
 
     # Plot as a stacked bar chart
     sns.barplot(x='week', y='has_promotion', data=discounted_transactions)
 
 
-def plot_product_sales(product, transactions: pd.DataFrame, promoted_articles: pd.DataFrame):
+def plot_product_sales(product: str, transactions: pd.DataFrame, promoted_articles: pd.DataFrame):
+    """
+    Plots the sales of a given product over time, with bars being marked as green if there is a discount and red if there is no discount.
+    :param product: Product to plot the sales and discounts of
+    :param transactions: (filtered) transactions dataframe
+    :param promoted_articles: transactions dataframe containing the discount information per week
+    :return: None
+    """
+
     # Get the amount of purchases over time of a given article
     product_purchases = transactions[transactions['article_id'] == product]['week'].value_counts().sort_index()
 
@@ -54,7 +75,14 @@ def plot_product_sales(product, transactions: pd.DataFrame, promoted_articles: p
 
 
 def plot_random_product_sales(transactions: pd.DataFrame, promoted_articles: pd.DataFrame):
-    # Sample a random article_id that has more than 1000 transactions
+    """
+    Plots the sales of a random product (with at least 1.000 transactions) over time,
+        with bars being marked as green if there is a discount and red if there is no discount.
+    :param transactions: (filtered) transactions dataframe
+    :param promoted_articles: transactions dataframe containing the discount information per week
+    :return: None
+    """
+
     product = transactions['article_id'].value_counts()[transactions['article_id'].value_counts() > 5000].sample(1).index[0]
 
     plot_product_sales(product, transactions, promoted_articles)

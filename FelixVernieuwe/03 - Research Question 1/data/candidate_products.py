@@ -1,5 +1,5 @@
 import pandas as pd
-
+from features import age_group_feature
 
 
 def get_first_sale_products(transactions: pd.DataFrame):
@@ -12,7 +12,7 @@ def get_most_sold_products(transactions: pd.DataFrame):
     # Return both count and rank, count by using size
     most_sold = transactions.groupby('article_id').size().reset_index(name='count')
     # Rank dataframe by count
-    most_sold['rank'] = most_sold['count'].rank(method='dense', ascending=False)
+    most_sold['rank'] = most_sold['count'].rank(method='first', ascending=False)
 
     # Get mean price of all time
     most_sold = pd.merge(most_sold, transactions.groupby('article_id')['price'].mean().reset_index(), on='article_id')
@@ -24,12 +24,19 @@ def get_most_sold_weekly_products(transactions: pd.DataFrame):
     """Get the most sold products per week"""
     # Return both count and rank, count by using size
     most_sold = transactions.groupby(['week', 'article_id']).size().reset_index(name='count')
-    most_sold['rank'] = most_sold.groupby('week')['count'].rank(method='dense', ascending=False)
+    # Rank dataframe by count
+    most_sold['rank'] = most_sold.groupby('week')['count'].rank(method='first', ascending=False)
 
     # Get mean price per week
     most_sold = pd.merge(most_sold, transactions.groupby(['week', 'article_id'])['price'].mean().reset_index(), on=['week', 'article_id'])
+    most_sold['week'] += 1
+    # Order by week and rank
+    most_sold = most_sold.sort_values(['week', 'rank'])
+    most_sold.reset_index(drop=True, inplace=True)
+    most_sold['rank'] = most_sold['rank'].astype('int32')
 
     return most_sold
+
 
 
 def get_most_sold_weekly_age_group_products(transactions: pd.DataFrame, customers: pd.DataFrame):

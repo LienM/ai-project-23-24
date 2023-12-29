@@ -2,6 +2,14 @@ import pandas as pd
 
 
 def all_time_rank_feature(transactions: pd.DataFrame, customers: pd.DataFrame, articles: pd.DataFrame):
+    """
+    Adds the all_time_rank feature to the transactions DataFrame.
+
+    :param transactions: (filtered) transactions dataframe
+    :param customers: Customer dataframe
+    :param articles: Article dataframe
+    :return: transactions, customers, articles
+    """
     # Rank the articles based on the amount of times they have been purchased
     most_purchased_articles = transactions.groupby('article_id').size().sort_values(ascending=False)
     most_purchased_articles = most_purchased_articles.reset_index()
