@@ -38,24 +38,19 @@ def calculate_top_seasonal_sales(df: pd.DataFrame, start_date: datetime.datetime
     return out_df
 
 
-def predict_top_items(df: pd.DataFrame) -> list:
+def predict_top_seasonal_items(seasonal_sales_df: pd.DataFrame) -> list:
     """
-    Predict most popular items in the period
-    :param df: Dataframe with top items per day based on season scores
-    :return: List of top items
+    Predict most popular items based on top seasonal sales
+    :param seasonal_sales_df: Dataframe with top items per day based on season scores, for prediction days
+    :return: List of top items based on top seasonal sales
     """
-    # Go through each row, items are already sorted based on season scores
-    # Each item gets a score based on the position in the list (leftmost = highest score)
-    # The item with the highest score is the most popular item
-    # Make a final selection of the top X items, where X is the length of the item column in the original dataframe
-
     item_scores = {}
-    for index, row in df.iterrows():
+    for index, row in seasonal_sales_df.iterrows():
         items = row['items'].split(' ')
         for i in range(len(items)):
             item_scores[items[i]] = item_scores.get(items[i], 0) + len(items) - i
 
-    return sorted(item_scores, key=item_scores.get, reverse=True)[:len(df['items'].iloc[0].split(' '))]
+    return sorted(item_scores, key=item_scores.get, reverse=True)[:len(seasonal_sales_df['items'].iloc[0].split(' '))]
 
 
 def _run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, rerun_seasonal_scores: bool = True,
@@ -96,7 +91,7 @@ def _run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, reru
     else:
         top_seasonal_sales_df = load_data(top_seasonal_sales_path, verbose, dtype={'article_id': str})
 
-    top_items = predict_top_items(top_seasonal_sales_df)
+    top_items = predict_top_seasonal_items(top_seasonal_sales_df)
     top_items_string = ' '.join([str(item_id) for item_id in top_items])
 
     submission_df = load_data_from_hnm(DataFileNames.SAMPLE_SUBMISSION, verbose)
