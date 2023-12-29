@@ -127,9 +127,9 @@ def describe_images(path: pathlib.Path, output_path: pathlib.Path, mp_pool_count
     print(f'[X] Described images in {time.time() - time_start:.2f} seconds.')
 
 
-def create_plot(df: pd.DataFrame, name: str, output_path: pathlib.Path,
-                binwidth: float = 2, height: int = 5, aspect: int = 2, plot_width: int = 15, plot_height: int = 10,
-                rotation: float = 60, dpi: int = 400, **kwargs) -> None:
+def create_plot(df: pd.DataFrame, name: str, output_path: pathlib.Path, binwidth: float = 2, height: int = 5,
+                aspect: int = 2, plot_width: int = 15, plot_height: int = 10, rotation: float = 60, dpi: int = 400,
+                **kwargs) -> None:
     """
     Create a plot for the given column in the given dataframe and save it to the given path.
     :param df: Dataframe to create the plot for
@@ -206,17 +206,19 @@ if __name__ == '__main__':
 
     # Plot relevant data as Seaborn plots
     with mp.Pool(processes=_mp_pool_count) as _pool:
-        _pool.starmap(create_plot,
-                      [(customers, 'age', plot_path), (articles, 'product_type_name', plot_path, 0, 1, 5, 2, 25, 10, 75),
-                      (articles, 'product_group_name', plot_path), (articles, 'graphical_appearance_name', plot_path),
-                      (articles, 'colour_group_name', plot_path, 0, 2, 5, 2, 15, 10, 90),
-                      (articles, 'perceived_colour_value_name', plot_path),
-                      (articles, 'perceived_colour_master_name', plot_path), (articles, 'index_name', plot_path),
-                      (articles, 'index_group_name', plot_path),
-                      (articles, 'section_name', plot_path, 0, 1, 5, 2, 20, 10, 75),
-                      (articles, 'garment_group_name', plot_path),
-                      (articles, 'department_name', plot_path, 0, 1, 5, 2, 35, 10, 90),
-                      (customers, 'club_member_status', plot_path), (customers, 'fashion_news_frequency', plot_path)])
+        _pool.starmap(create_plot, [(customers, 'age', plot_path),
+                                    (articles, 'product_type_name', plot_path, 0, 1, 5, 2, 25, 10, 75),
+                                    (articles, 'product_group_name', plot_path),
+                                    (articles, 'graphical_appearance_name', plot_path),
+                                    (articles, 'colour_group_name', plot_path, 0, 2, 5, 2, 15, 10, 90),
+                                    (articles, 'perceived_colour_value_name', plot_path),
+                                    (articles, 'perceived_colour_master_name', plot_path),
+                                    (articles, 'index_name', plot_path), (articles, 'index_group_name', plot_path),
+                                    (articles, 'section_name', plot_path, 0, 1, 5, 2, 20, 10, 75),
+                                    (articles, 'garment_group_name', plot_path),
+                                    (articles, 'department_name', plot_path, 0, 1, 5, 2, 35, 10, 90),
+                                    (customers, 'club_member_status', plot_path),
+                                    (customers, 'fashion_news_frequency', plot_path)])
 
     # Describe data
     thread_start_time = time.time()
