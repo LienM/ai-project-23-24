@@ -1,133 +1,113 @@
 import numpy as np
 import pandas as pd
-from sklearn.base import BaseEstimator, TransformerMixin
-from surprise import SVD
-from surprise import Dataset, Reader
-
-import pickle
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
-
-def apk(actual, predicted, k=10):
+def get_purchases(transactions):
     """
-    Computes the average precision at k.
+    Convert a dataframe containing transactions to a dataframe where each row has a customer_id and a list of purchases for that customer.
 
-    This function computes the average prescision at k between two lists of
-    items.
-
-    Parameters
-    ----------
-    actual : list
-             A list of elements that are to be predicted (order doesn't matter)
-    predicted : list
-                A list of predicted elements (order does matter)
-    k : int, optional
-        The maximum number of predicted elements
-
-    Returns
-    -------
-    score : double
-            The average precision at k over the input lists
-
+    @param transactions: a dataframe of transactions
     """
-    if len(predicted) > k:
-        predicted = predicted[:k]
-
-    score = 0.0
-    num_hits = 0.0
-
-    for i, p in enumerate(predicted):
-        if p in actual and p not in predicted[:i]:
-            num_hits += 1.0
-            score += num_hits / (i + 1.0)
-
-    if not actual:
-        return 0.0
-
-    return score / min(len(actual), k)
+    return (
+        transactions.groupby("customer_id", as_index=False)
+        .article_id.apply(set)
+        .rename(columns={"article_id": "purchases"})[["customer_id", "purchases"]]
+    )
 
 
-def mapk(actual, predicted, k=10):
+def get_predictions(candidates, features, ranker, k=12):
     """
-    Computes the mean average precision at k.
+    Uses a dataframe of candidates, a dataframe of features belonging to the candidates, and a trained ranker to generate k predictions for each customer represented in the candidates.
+    The candidates dataframe must have the same index as the features dataframe.
 
-    This function computes the mean average prescision at k between two lists
-    of lists of items.
+    The ranker must have a predict method that takes a dataframe of features and returns a series of scores.
 
-    Parameters
-    ----------
-    actual : list
-             A list of lists of elements that are to be predicted
-             (order doesn't matter in the lists)
-    predicted : list
-                A list of lists of predicted elements
-                (order matters in the lists)
-    k : int, optional
-        The maximum number of predicted elements
-
-    Returns
-    -------
-    score : double
-            The mean average precision at k over the input lists
-
+    @candidates: a dataframe of candidates (customer_id, article_id)
+    @features: a dataframe of features belonging to the candidates
+    @ranker: a trained ranker
+    @k: the number of predictions to generate for each customer
     """
-    return np.mean([apk(a, p, k) for a, p in zip(actual, predicted)])
+    scored_candidates = candidates.copy()
+    scored_candidates["score"] = ranker.predict(features)
+
+    return (
+        scored_candidates.sort_values(["customer_id", "score"], ascending=False)
+        .groupby("customer_id")
+        .head(k)
+        .groupby("customer_id", as_index=False)
+        .article_id.apply(list)
+        .rename(columns={"article_id": "prediction"})[["customer_id", "prediction"]]
+    )
+
+
+def fill_missing_predictions(predictions, customers, prediction):
+    """
+    Add predictions for customers that are not in the predictions dataframe.
+
+    @param predictions: the original predictions dataframe
+    @param customers: a list of customer ids for which the prediction should be added if they are missing
+    @param prediction: a list of article ids that is to be used as the prediction
+    """
+    missing_customers = pd.Series(
+        list(set(customers) - set(predictions.customer_id)),
+        name="customer_id",
+    )
+    missing_predictions = pd.merge(
+        missing_customers, pd.Series([prediction], name="prediction"), how="cross"
+    )
+
+    return pd.concat((predictions, missing_predictions))
+
+
+def mean_average_precision(predictions, purchases, k=12):
+    """
+    Calculates the mean average precision for a set of predictions and purchases.
+    Each row in the predictions and purchases has a customer_id and a list of purchases or predictions.
+
+    @param predictions: a dataframe of predictions
+    @param purchases: a dataframe of ground truth purchases
+    """
+
+    def average_precision(row):
+        score = 0
+        num_hits = 0
+
+        for i, p in enumerate(row.prediction[:k]):
+            if p in row.purchases and p not in row.prediction[:i]:
+                num_hits += 1
+                score += num_hits / (i + 1)
+
+        return score / min(len(row.purchases), k)
+
+    result = pd.merge(purchases, predictions, on="customer_id", how="inner")
+    result["average_precision"] = result.apply(average_precision, axis=1)
+
+    return result.average_precision.sum() / len(purchases)
+
+
+def create_submission(predictions, sample_submission):
+    predictions = predictions.set_index("customer_id").prediction.to_dict()
+    preds = []
+    result = sample_submission.copy()
+    for customer_id in customer_hex_id_to_int(result.customer_id):
+        preds.append(" ".join(f"0{x}" for x in predictions[customer_id]))
+    result.prediction = preds
+    return result
 
 
 # https://www.kaggle.com/c/h-and-m-personalized-fashion-recommendations/discussion/308635
 def customer_hex_id_to_int(series):
+    def hex_id_to_int(str):
+        return int(str[-16:], 16)
+
     return series.str[-16:].apply(hex_id_to_int)
 
 
-def hex_id_to_int(str):
-    return int(str[-16:], 16)
-
-
-def article_id_str_to_int(series):
-    return series.astype('int32')
-
-
-def article_id_int_to_str(series):
-    return '0' + series.astype('str')
-
-
-class Categorize(BaseEstimator, TransformerMixin):
-    def __init__(self, min_examples=0):
-        self.min_examples = min_examples
-        self.categories = []
-
-    def fit(self, X):
-        for i in range(X.shape[1]):
-            vc = X.iloc[:, i].value_counts()
-            self.categories.append(vc[vc > self.min_examples].index.tolist())
-        return self
-
-    def transform(self, X):
-        data = {X.columns[i]: pd.Categorical(X.iloc[:, i], categories=self.categories[i]).codes for i in
-                range(X.shape[1])}
-        return pd.DataFrame(data=data)
-
-
-def calculate_apk(list_of_preds, list_of_gts):
-    # for fast validation this can be changed to operate on dicts of {'cust_id_int': [art_id_int, ...]}
-    # using 'data/val_week_purchases_by_cust.pkl'
-    apks = []
-    for preds, gt in zip(list_of_preds, list_of_gts):
-        apks.append(apk(gt, preds, k=12))
-    return np.mean(apks)
-
-
-def eval_sub(sub_csv, skip_cust_with_no_purchases=True):
-    sub = pd.read_csv(sub_csv)
-    validation_set = pd.read_parquet('data/validation_ground_truth.parquet')
-
-    apks = []
-
-    no_purchases_pattern = []
-    for pred, gt in zip(sub.prediction.str.split(), validation_set.prediction.str.split()):
-        if skip_cust_with_no_purchases and (gt == no_purchases_pattern): continue
-        apks.append(apk(gt, pred, k=12))
-    return np.mean(apks)
+def print_importance(ranker, features):
+    for i in ranker.feature_importances_.argsort()[::-1]:
+        imp = ranker.feature_importances_[i] / ranker.feature_importances_.sum()
+        print(f"{features[i]:>30} {imp:.5f}")
 
 
 class ItemCF:
@@ -144,6 +124,7 @@ class ItemCF:
         self.article_id2index = {a: i for i, a in enumerate(np.unique(self.articles))}
 
     def __sdg__(self):
+        total_loss = 0
         for idx in tqdm(self.training_indices):
             # Get the current sample
             customer_id = self.customers[idx]
@@ -158,12 +139,18 @@ class ItemCF:
             prediction = self.predict(customer_index, article_index)
             error = (bought - prediction)  # error
 
+            total_loss += error ** 2  # Squared error (you can use other loss functions too)
+
             # Update latent factors in terms of the learning rate and the observed error
             self.customers_latent_matrix[customer_index] += self.learning_rate * \
-                                                            (error * self.articles_latent_matrix[article_index] - self.lmbda * self.customers_latent_matrix[customer_index])
+                                                            (error * self.articles_latent_matrix[
+                                                                article_index] - self.lmbda *
+                                                             self.customers_latent_matrix[customer_index])
             self.articles_latent_matrix[article_index] += self.learning_rate * \
                                                           (error * self.customers_latent_matrix[customer_index] - \
                                                            self.lmbda * self.articles_latent_matrix[article_index])
+        mean_loss = total_loss / len(self.training_indices)
+        return mean_loss
 
     def fit(self, n_epochs=10, learning_rate=0.001, lmbda=0.1):
         """ Compute the matrix factorization R = P x Q """
@@ -176,14 +163,25 @@ class ItemCF:
                                                         size=(len(np.unique(self.customers)), self.num_components))
         self.articles_latent_matrix = np.random.normal(scale=1.,
                                                        size=(len(np.unique(self.articles)), self.num_components))
-
+        losses = []
         for epoch in range(n_epochs):
-            print('Epoch: {}'.format(epoch))
+            print('\rEpoch: {}'.format(epoch))
             self.training_indices = np.arange(n_samples)
 
             # Shuffle training samples and follow stochastic gradient descent
             np.random.shuffle(self.training_indices)
-            self.__sdg__()
+            losses.append(self.__sdg__())
+        # Creating a scatter plot
+        plt.figure(figsize=(10, 6))
+        plt.plot(losses)
+        plt.xlabel('Epochs')
+        plt.ylabel('Loss')
+        plt.title('Loss function')
+        plt.grid()
+        plt.show()
+
+        # Show the plot
+        plt.show()
 
     def predict(self, customer_index, article_index):
         """ Make a prediction for a specific user and article """
@@ -191,6 +189,3 @@ class ItemCF:
         prediction = np.clip(prediction, 0, 1)
 
         return prediction
-
-
-

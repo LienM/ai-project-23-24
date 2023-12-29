@@ -2,11 +2,19 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
+ALL_GRAPHS = ["MAPK_ALL", "MAPK", "MRR_ALL", "MRR", "PR", "PREC", "REC"]
 
 def customer_hex_id_to_int(series):
+    '''
+    Function from Radek - converts each customer ID in series to an int.
+    '''
     return series.str[-16:].apply(hex_id_to_int)
 
+
 def hex_id_to_int(str):
+    '''
+    Function from Radek - converts a hex string to an int.
+    '''
     return int(str[-16:], 16)
 
 
@@ -59,10 +67,9 @@ def get_preds_and_actual(test, preds_col, test_week_transactions, sub, bestselle
     return preds, actual_purchases, preds_dense, actual_purchases_dense
 
 
-
-
 def apk(actual, predicted, k=10):
     """
+    Function from Radek.
     Computes the average precision at k.
 
     This function computes the average prescision at k between two lists of
@@ -99,8 +106,10 @@ def apk(actual, predicted, k=10):
 
     return score / min(len(actual), k)
 
+
 def mapk(actual, predicted, k=10):
     """
+    Function from Radek.
     Computes the mean average precision at k.
 
     This function computes the mean average prescision at k between two lists
@@ -126,16 +135,10 @@ def mapk(actual, predicted, k=10):
     return np.mean([apk(a,p,k) for a,p in zip(actual, predicted)])
 
 
-
-
 def mrr(actual, predicted):
     '''
     Computes the mean reciprocal rank of the given predictions according to the given actual lists.
     '''
-
-    #for each customer,
-    #   for each predicted item:
-    #       if the item is in the actual, add the reciprocal of the rank.
 
     acc = 0
 
@@ -169,7 +172,6 @@ def precision_recall_at_k(actual, predicted, k):
     return precision, recall
 
 
-
 def get_pr_curve(actual, predicted, max_k):
     '''
     Returns
@@ -187,8 +189,7 @@ def get_pr_curve(actual, predicted, max_k):
     return pr_curve
 
 
-
-def get_evaluation_plots(test, pred_cols, test_week_transactions, bestsellers_previous_week, show_plots=True):
+def get_evaluation_plots(test, pred_cols, test_week_transactions, bestsellers_previous_week, show_plots=True, graphs=ALL_GRAPHS):
     '''
     Evaluates rankings (given as columns on test) by comparing to actual purchases made in the test week
 
@@ -198,6 +199,7 @@ def get_evaluation_plots(test, pred_cols, test_week_transactions, bestsellers_pr
         test_week_transactions (pandas.DataFrame): DataFrame containing all the transactions that *actually occured* during the test week.
         bestsellers_previous_week (pandas.DataFrame or None): dataframe containing the bestsellers and their bestseller rank from the previous week (used for padding the predictions if test doesnt contain enough - optional).
         show_plots (boolean): if true, creates matplotlib plots to visualise metrics for each of the prediction sets.
+        graphs (list): list of strings of which graphs to plot. Possible values are: ["MAPK_ALL", "MAPK", "MRR_ALL", "MRR", "PR", "PREC", "REC"]
 
     Returns:
         mapk_per_col (dict): dictionary of lists of MAP@k scores for k from 1 to 12. Indexing done using elements of pred_cols as keys.
@@ -240,85 +242,93 @@ def get_evaluation_plots(test, pred_cols, test_week_transactions, bestsellers_pr
     if show_plots:
         #visualising MAPK scores
         size = (10,6)
-        plt.figure(figsize=size)
-        for method, scores in mapk_per_col.items():
-            plt.plot(range(1,12), scores, label=method)
-        plt.ylabel("MAP score")
-        plt.xlabel("k")
-        plt.title(f"MAPK of predictions (all customers)")
-        plt.legend()
-        plt.grid(True, which="major", axis="y", alpha=0.5)
-        plt.show()
 
-        plt.figure(figsize=size)
-        for method, scores in mapk_per_col_dense.items():
-            plt.plot(range(1,12), scores, label=method)
-        plt.ylabel("MAP score")
-        plt.xlabel("k")
-        plt.title(f"MAPK of predictions (only purchasing customers)")
-        plt.legend()
-        plt.grid(True, which="major", axis="y", alpha=0.5)
-        plt.show()
+        if "MAPK_ALL" in graphs:
+            plt.figure(figsize=size)
+            for method, scores in mapk_per_col.items():
+                plt.plot(range(1,12), scores, label=method)
+            plt.ylabel("MAP score")
+            plt.xlabel("k")
+            plt.title(f"MAPK of predictions (all customers)")
+            plt.legend()
+            plt.grid(True, which="major", axis="y", alpha=0.5)
+            plt.show()
+        
+        if "MAPK" in graphs:
 
-
-        #MRR for all customers
-        plt.figure(figsize=size)
-        plt.scatter(pred_cols, mrr_per_col)
-        plt.ylabel("MRR score")
-        plt.xlabel("Ranking Method")
-        plt.title(f"MRR of predictions (all customers)")
-        plt.xticks(rotation=45)
-        plt.grid(True, which="major", axis="y", alpha=0.5)
-        plt.show()
+            plt.figure(figsize=size)
+            for method, scores in mapk_per_col_dense.items():
+                plt.plot(range(1,12), scores, label=method)
+            plt.ylabel("MAP score")
+            plt.xlabel("k")
+            plt.title(f"MAPK of predictions (only purchasing customers)")
+            plt.legend()
+            plt.grid(True, which="major", axis="y", alpha=0.5)
+            plt.show()
 
 
-        #MRR for purchasing customers
-        plt.figure(figsize=size)
-        plt.scatter(pred_cols, mrr_per_col_dense)
-        plt.ylabel("MRR score")
-        plt.xlabel("Ranking Method")
-        plt.title(f"MRR of predictions (only purchasing customers)")
-        plt.xticks(rotation=45)
-        plt.grid(True, which="major", axis="y", alpha=0.5)
-        plt.show()
+        if "MRR_ALL" in graphs:
+            #MRR for all customers
+            plt.figure(figsize=size)
+            plt.scatter(pred_cols, mrr_per_col)
+            plt.ylabel("MRR score")
+            plt.xlabel("Ranking Method")
+            plt.title(f"MRR of predictions (all customers)")
+            plt.xticks(rotation=45)
+            plt.grid(True, which="major", axis="y", alpha=0.5)
+            plt.show()
+
+        if "MRR" in graphs:
+            #MRR for purchasing customers
+            plt.figure(figsize=size)
+            plt.scatter(pred_cols, mrr_per_col_dense)
+            plt.ylabel("MRR score")
+            plt.xlabel("Ranking Method")
+            plt.title(f"MRR of predictions (only purchasing customers)")
+            plt.xticks(rotation=45)
+            plt.grid(True, which="major", axis="y", alpha=0.5)
+            plt.show()
 
 
-        #pr curve
-        plt.figure(figsize=size)
-        for method, scores in pr_curves_dense.items():
-            plt.plot(scores[1], scores[0], label=method)
-        for i in range(len(scores[0])):
-            plt.annotate(f"k={i+1}", xy=(scores[1][i], scores[0][i]))
-        plt.ylabel("Precision (avg. across customers)")
-        plt.xlabel("Recall (avg. across customers)")
-        plt.title(f"Precision-Recall curve up to k=12 (only customers who bought >= k items)")
-        plt.legend()
-        plt.grid(True, which="major", axis="y", alpha=0.5)
-        plt.show()
+        if "PR" in graphs:
+            #pr curve
+            plt.figure(figsize=size)
+            for method, scores in pr_curves_dense.items():
+                plt.plot(scores[1], scores[0], label=method)
+            for i in range(len(scores[0])):
+                plt.annotate(f"k={i+1}", xy=(scores[1][i], scores[0][i]))
+            plt.ylabel("Precision (avg. across customers)")
+            plt.xlabel("Recall (avg. across customers)")
+            plt.title(f"Precision-Recall curve up to k=12 (only customers who bought >= k items)")
+            plt.legend()
+            plt.grid(True, which="major", axis="y", alpha=0.5)
+            plt.show()
 
 
-        #precision@k
-        plt.figure(figsize=size)
-        for method, scores in pr_curves_dense.items():
-            plt.plot(range(1, len(scores[0])+1), scores[0], label=method)
-        plt.ylabel("Precision (avg. across customers)")
-        plt.xlabel("k")
-        plt.title(f"Precision@k (only customers who bought >= k items)")
-        plt.legend()
-        plt.grid(True, which="major", axis="y", alpha=0.5)
-        plt.show()
+        if "PREC" in graphs:
+            #precision@k
+            plt.figure(figsize=size)
+            for method, scores in pr_curves_dense.items():
+                plt.plot(range(1, len(scores[0])+1), scores[0], label=method)
+            plt.ylabel("Precision (avg. across customers)")
+            plt.xlabel("k")
+            plt.title(f"Precision@k (only customers who bought >= k items)")
+            plt.legend()
+            plt.grid(True, which="major", axis="y", alpha=0.5)
+            plt.show()
 
 
-        #recall@k
-        plt.figure(figsize=size)
-        for method, scores in pr_curves_dense.items():
-            plt.plot(range(1, len(scores[1])+1), scores[1], label=method)
-        plt.ylabel("Recall (avg. across customers)")
-        plt.xlabel("k")
-        plt.title(f"Recall@k (only customers who bought >= k items)")
-        plt.legend()
-        plt.grid(True, which="major", axis="y", alpha=0.5)
-        plt.show()
+        if "REC" in graphs:
+            #recall@k
+            plt.figure(figsize=size)
+            for method, scores in pr_curves_dense.items():
+                plt.plot(range(1, len(scores[1])+1), scores[1], label=method)
+            plt.ylabel("Recall (avg. across customers)")
+            plt.xlabel("k")
+            plt.title(f"Recall@k (only customers who bought >= k items)")
+            plt.legend()
+            plt.grid(True, which="major", axis="y", alpha=0.5)
+            plt.show()
 
 
     return mapk_per_col, mapk_per_col_dense, mrr_per_col, mrr_per_col_dense, pr_curves_dense

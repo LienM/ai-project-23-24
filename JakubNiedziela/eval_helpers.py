@@ -9,7 +9,44 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 
+def recall(true, pred):
+    """
+    Calculate the Recall metric for a single user.
+
+    Parameters
+    ----------
+
+    true : set 
+        A set of the articles the user has actually read.
+    pred : set
+        A set of articles the user is predicted to read.
+
+    Returns
+    -------
+    float
+        The Recall for the single user.
+    """
+    return len(true.intersection(pred)) / len(true)
+
+
 def calculate_recall_score(test_week_transactions, predictions_df, k=100):
+    '''
+    Calculate Recall@k for a given DataFrame with predictions.
+    
+    Parameters
+    ----------
+    test_week_transactions : pd.DataFrame
+        DataFrame with test data.
+    predictions_df : pd.DataFrame
+        DataFrame with predictions.
+    k : int, default=100
+        Number of top recommendations to consider for each user.
+    
+    Returns
+    -------
+    float
+        Recall@k score.
+    '''
     y_true = test_week_transactions.groupby('customer_id')['article_id'].apply(list).reset_index()
     y_true.columns = ['customer_id', 'y_true']
     predictions_df.columns = ['customer_id', 'y_pred']
@@ -21,12 +58,17 @@ def recall_at_k(df, k):
     """
     Calculate the average Recall@K from a DataFrame using vectorized operations.
 
-    Parameters:
-    df (DataFrame): A DataFrame with columns 'customer_id', 'actual_bought', and 'candidates'.
-    k (int): The number of top recommendations to consider for each user.
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame with columns: customer_id, y_true, y_pred
+    k : int
+        Number of top recommendations to consider for each user.
 
-    Returns:
-    float: The average Recall@K across all users.
+    Returns
+    -------
+    float
+        The average Recall@K for the DataFrame.
     """
     def calculate_recall(row):
         top_k_items = set(row['y_pred'][:k])
@@ -51,7 +93,7 @@ def plot_recall_by_k(df, legend_column):
 
     Returns
     -------
-        None.
+        None
     '''
     if not {'k', legend_column, 'recall_score'}.issubset(df.columns):
         raise ValueError(f"DataFrame must contain 'k', '{legend_column}', and 'recall_score' columns")
@@ -71,18 +113,18 @@ def precision_at_k(y_true, y_pred, k=12):
     """ Computes Precision at k for one sample
     
     Parameters
-    __________
+    ----------
     y_true: np.array
-            Array of correct recommendations (Order doesn't matter)
+        Array of correct recommendations (Order doesn't matter)
     y_pred: np.array
-            Array of predicted recommendations (Order does matter)
+        Array of predicted recommendations (Order does matter)
     k: int, optional
-       Maximum number of predicted recommendations
+        Maximum number of predicted recommendations
             
     Returns
-    _______
-    score: double
-           Precision at k
+    -------
+    float
+        Precision at k
     """
     intersection = np.intersect1d(y_true, y_pred[:k])
     return len(intersection) / k
@@ -92,7 +134,7 @@ def rel_at_k(y_true, y_pred, k=12):
     """ Computes Relevance at k for one sample
     
     Parameters
-    __________
+    ----------
     y_true: np.array
             Array of correct recommendations (Order doesn't matter)
     y_pred: np.array
@@ -101,9 +143,9 @@ def rel_at_k(y_true, y_pred, k=12):
        Maximum number of predicted recommendations
             
     Returns
-    _______
-    score: double
-           Relevance at k
+    -------
+    int
+        Relevance at k
     """
     if y_pred[k-1] in y_true:
         return 1
@@ -115,18 +157,18 @@ def average_precision_at_k(y_true, y_pred, k=12):
     """ Computes Average Precision at k for one sample
     
     Parameters
-    __________
+    ----------
     y_true: np.array
-            Array of correct recommendations (Order doesn't matter)
+        Array of correct recommendations (Order doesn't matter)
     y_pred: np.array
-            Array of predicted recommendations (Order does matter)
+        Array of predicted recommendations (Order does matter)
     k: int, optional
-       Maximum number of predicted recommendations
+        Maximum number of predicted recommendations
             
     Returns
-    _______
-    score: double
-           Average Precision at k
+    -------
+    float
+        Average Precision at k
     """
     ap = 0.0
     for i in range(1, k+1):
@@ -139,7 +181,7 @@ def mean_average_precision(y_true, y_pred, k=12):
     """ Computes MAP at k
     
     Parameters
-    __________
+    ----------  
     y_true: np.array
             2D Array of correct recommendations (Order doesn't matter)
     y_pred: np.array
@@ -148,9 +190,9 @@ def mean_average_precision(y_true, y_pred, k=12):
        Maximum number of predicted recommendations
             
     Returns
-    _______
-    score: double
-           MAP at k
+    -------
+    float
+        MAP@k across all samples
     """
     return np.mean([average_precision_at_k(gt, pred, k) \
                     for gt, pred in zip(y_true, y_pred)])

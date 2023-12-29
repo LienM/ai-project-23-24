@@ -1,0 +1,6 @@
+In this folder is possible to find all the codes used for replying to the first research question
+
+Gender_clothes.ipynb: code used to identify the gender of the clothes
+Gender_customers.ipynb: code used to identify the gender of the customers
+new_customers parquet.ipynb and Parquet_new_datasets.ipynb: code used for the creation of a .parquet file to use in the model
+Submission_gender_articles.ipynb and Submission_gender_customers.ipynb: code for the submissions made on Kaggle
