@@ -5,7 +5,7 @@ import time
 import zipfile
 from io import BytesIO
 from pathlib import Path
-from typing import Union
+from typing import Union, Optional
 
 import pandas as pd
 
@@ -13,7 +13,7 @@ from features.add_season_score import add_season_scores
 from pruning.prune_outdated_items import prune_outdated_items
 from utils.kaggle_tool import KaggleTool
 from utils.season import Seasons
-from utils.utils import DataFileNames, load_data_from_hnm, get_data_path, load_data, ProjectConfig
+from utils.utils import DataFileNames, load_data_from_hnm, get_data_path, ProjectConfig
 
 
 def calculate_top_seasonal_sales(df: pd.DataFrame, start_date: datetime.datetime, end_date: datetime.datetime,
@@ -53,15 +53,17 @@ def predict_top_seasonal_items(seasonal_sales_df: pd.DataFrame) -> list:
     return sorted(item_scores, key=item_scores.get, reverse=True)[:len(seasonal_sales_df['items'].iloc[0].split(' '))]
 
 
-def _run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, rerun_seasonal_scores: bool = True,
-                           rerun_all: bool = False, to_csv: bool = True, verbose: bool = True,
+def _run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, to_csv: bool = True, verbose: bool = True,
                            submission_suffix: str = None, do_prune_outdated_items: bool = True) -> Union[Path, BytesIO]:
-    # Output paths
-    seasonal_scores_path = get_data_path() / DataFileNames.OUTPUT_DIR / 'seasonal_scores.csv'
-    article_sales_per_date_path = get_data_path() / DataFileNames.OUTPUT_DIR / 'article_sales_per_date.csv'
-    seasonal_sales_path = get_data_path() / DataFileNames.OUTPUT_DIR / 'seasonal_sales.csv'
-    top_seasonal_sales_path = get_data_path() / DataFileNames.OUTPUT_DIR / 'top_seasonal_sales.csv'
-
+    """
+    Runs seasonal analysis for a given set of parameters.
+    :param max_score_offset: Offset from start of season to max score day. (Note that this should be negative to be *before* the season starts)
+    :param max_score_day_range: Range of days around max score day to calculate score for.
+    :param to_csv: Whether to save the submission to a csv file.
+    :param verbose: Whether to run all calculations verbose.
+    :param do_prune_outdated_items: Whether to prune outdated items.
+    :return: Path to the submission csv file if to_csv is True, else the BytesIO object containing the csv file.
+    """
     transactions_df = load_data_from_hnm(DataFileNames.TRANSACTIONS_TRAIN.replace('.csv', '.parquet'), verbose,
                                          dtype={'article_id': str})
     articles_df = load_data_from_hnm(DataFileNames.ARTICLES.replace('.csv', '.parquet'), verbose,
@@ -71,8 +73,7 @@ def _run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, reru
         articles_df, transactions_df = prune_outdated_items(articles_df, transactions_df, cutoff_days=365)
 
     if verbose:
-        print(
-            f"Using season parameters: max_score_offset={max_score_offset}, max_score_day_range={max_score_day_range}.")
+        print(f"Using parameters: max_score_offset={max_score_offset}, max_score_day_range={max_score_day_range}.")
 
     for season in Seasons.seasons:
         season.set_max_score_offset(max_score_offset)
@@ -80,24 +81,17 @@ def _run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, reru
 
     seasonal_scores_df = add_season_scores(transactions_df)
 
-    top_seasonal_sales_df = None
-    if not top_seasonal_sales_path.exists() or rerun_seasonal_scores or rerun_all:
-        # Calculate top seasonal sales
-        top_seasonal_sales_df = calculate_top_seasonal_sales(seasonal_scores_df, ProjectConfig.DATA_END,
-                                                             ProjectConfig.DATA_END + datetime.timedelta(days=7))
+    # Calculate top seasonal sales
+    top_seasonal_sales_df = calculate_top_seasonal_sales(seasonal_scores_df, ProjectConfig.DATA_END,
+                                                         ProjectConfig.DATA_END + datetime.timedelta(days=7))
 
-        if to_csv:
-            top_seasonal_sales_df.to_csv(top_seasonal_sales_path, index=False)
-    else:
-        top_seasonal_sales_df = load_data(top_seasonal_sales_path, verbose, dtype={'article_id': str})
-
+    # Predict top seasonal items
     top_items = predict_top_seasonal_items(top_seasonal_sales_df)
     top_items_string = ' '.join([str(item_id) for item_id in top_items])
 
+    # Create submission
     submission_df = load_data_from_hnm(DataFileNames.SAMPLE_SUBMISSION, verbose)
     submission_df['prediction'] = top_items_string
-
-    output = None
 
     if to_csv:
         output = get_data_path() / DataFileNames.OUTPUT_DIR / (
@@ -110,10 +104,16 @@ def _run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, reru
     return output
 
 
-def already_ran_for(score_offset: int, day_range: int, kaggle_tool: KaggleTool):
+def already_ran_for(score_offset: int, day_range: int, kaggle_tool: KaggleTool) -> bool:
+    """
+    Checks if the analysis already ran for the given parameters.
+    :param score_offset: Offset from start of season to max score day.
+    :param day_range: Range of days around max score day to calculate score for.
+    :param kaggle_tool: KaggleTool object to use for checking submissions.
+    :return: Whether the analysis already ran for the given parameters.
+    """
     submissions = kaggle_tool.list_submissions_wrapped()
 
-    # Check if submission with same parameters already exists
     for submission in submissions:
         try:
             description = submission.parse_json_description()
@@ -126,15 +126,12 @@ def already_ran_for(score_offset: int, day_range: int, kaggle_tool: KaggleTool):
 
 
 def run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, check_already_ran: bool = False,
-                          rerun_seasonal_scores: bool = True, rerun_all: bool = False,
-                          do_prune_outdated_items: bool = True, submit_to_kaggle: bool = True, keep_zip: bool = False):
+                          do_prune_outdated_items: bool = True, submit_to_kaggle: bool = True, keep_zip: bool = False) -> Optional[BytesIO]:
     """
-    Runs seasonal analysis for a given set of parameters.
+    Runs seasonal analysis for a given set of parameters. Optionally uploads the results to Kaggle.
     :param max_score_offset: Offset from start of season to max score day.
     :param max_score_day_range: Range of days around max score day to calculate score for.
     :param check_already_ran: Whether to check Kaggle submissions if the analysis already ran for the given parameters.
-    :param rerun_seasonal_scores: Whether to rerun the seasonal scores.
-    :param rerun_all: Whether to rerun all calculations.
     :param do_prune_outdated_items: Whether to prune outdated items.
     :param submit_to_kaggle: Whether to submit the results to Kaggle.
     :param keep_zip: Whether to keep the zip file.
@@ -146,13 +143,12 @@ def run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, check
         if already_ran_for(max_score_offset, max_score_day_range, kaggle_tool):
             print(
                 f'> Already ran analysis for max_score_offset={max_score_offset} and max_score_day_range={max_score_day_range}.')
-            return
+            return None
 
     print(f'> Running analysis for max_score_offset={max_score_offset} and max_score_day_range={max_score_day_range}.')
 
     start_time = time.time()
     output_bytes = _run_seasonal_analysis(max_score_offset, max_score_day_range,
-                                          rerun_seasonal_scores=rerun_seasonal_scores, rerun_all=rerun_all,
                                           verbose=False, to_csv=False, do_prune_outdated_items=do_prune_outdated_items)
 
     print(
@@ -181,18 +177,3 @@ def run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, check
         zip_path.unlink()
 
     return output_bytes
-
-
-def run_seasonal_analysis_parallel(_mp_pool_count: int, combinations: list):
-    """
-    Runs seasonal analysis for a range of parameters and uploads the results to Kaggle.
-    Processing is done in parallel using multiprocessing.
-    :param _mp_pool_count: Number of processes to use for multiprocessing
-    :param combinations: List of tuples containing the parameters to run the analysis for
-    """
-    with mp.Pool(_mp_pool_count) as pool:
-        pool.starmap(_run_seasonal_analysis, combinations)
-
-
-if __name__ == '__main__':
-    _run_seasonal_analysis(-30, 30, True, to_csv=True, verbose=False, submission_suffix='test')
