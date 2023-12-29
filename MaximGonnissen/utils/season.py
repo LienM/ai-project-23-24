@@ -163,7 +163,7 @@ class Season:
         :param date: Date to get season score for.
         :return: Season score for given date.
         """
-        return max(0, self.max_score_day_range - CalendarDay(date.dayofyear).distance_from(self.max_score_day))
+        return max(0, (self.max_score_day_range * 2) - CalendarDay(date.dayofyear).distance_from(self.max_score_day + self.max_score_day_range))
 
 
 class Seasons:
