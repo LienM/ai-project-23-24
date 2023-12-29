@@ -3,11 +3,14 @@ import pandas as pd
 
 def remove_active_nulls(customers_df: pd.DataFrame) -> pd.DataFrame:
     """
+    @DEPRECATED: This function is deprecated because it removes too many customers.
+
     Remove customers with a null value in the 'active' column from the customers.csv DataFrame.
 
     :param customers_df: DataFrame containing customer information
     :return: DataFrame containing only active customers
     """
+    raise DeprecationWarning('This function is deprecated because it removes too many customers.')
     return customers_df[customers_df['Active'].notnull()]
 
 
@@ -24,7 +27,7 @@ def remove_active_pre_create(customers_df: pd.DataFrame) -> pd.DataFrame:
 def prune_inactive(customers_df: pd.DataFrame) -> pd.DataFrame:
     """
     Prune inactive customers from the customers.csv DataFrame.
-    Inactive customers are defined as customers who have not made a purchase in the last 24 months.
+    Inactive customers are defined as customers who appear to not have finished creating their account.
 
     :param customers_df: DataFrame containing customer information
     :return: DataFrame containing only active customers

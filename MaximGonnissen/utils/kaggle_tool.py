@@ -1,13 +1,15 @@
+import json
+from datetime import datetime
+
 import kaggle
 from kaggle.models.kaggle_models_extended import Submission
-from datetime import datetime
-import json
 
 
 class SubmissionWrapper:
     """
     Wrapper for Kaggle submission
     """
+
     def __init__(self, submission: Submission):
         self.submission = submission
 
@@ -62,7 +64,7 @@ class KaggleTool:
             self.api.authenticate()
 
     @PendingDeprecationWarning
-    def get_all_submissions(self, competition: str = None):
+    def get_all_submissions(self, competition: str = None) -> list:
         # TODO: pagination doesn't work? Deprecated for now
         submissions = []
         results = []
@@ -77,13 +79,14 @@ class KaggleTool:
 
         return submissions
 
-    def list_submissions(self, competition: str = None):
+    def list_submissions(self, competition: str = None) -> list:
         return self.api.competition_submissions(competition or self.competition)
 
-    def list_submissions_wrapped(self, competition: str = None):
+    def list_submissions_wrapped(self, competition: str = None) -> list:
         return [SubmissionWrapper(submission) for submission in self.list_submissions(competition)]
 
-    def upload_submission(self, file: str, message: str = None, competition: str = None, quiet: bool = True, metadata: dict = None):
+    def upload_submission(self, file: str, message: str = None, competition: str = None, quiet: bool = True,
+                          metadata: dict = None) -> None:
         if metadata is not None:
             metadata['message'] = message
             message = json.dumps(metadata)

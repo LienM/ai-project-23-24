@@ -15,4 +15,8 @@ def add_article_unique_customers_popularity(articles_df: pd.DataFrame, transacti
     if 'unique_customers' not in temp_articles_df.columns:
         temp_articles_df = add_article_unique_customers(temp_articles_df, transactions_df)
 
-    return temp_articles_df['unique_customers'].rank(method='dense', ascending=False).astype(int)
+    temp_articles_df['unique_customers'] = temp_articles_df['unique_customers'].fillna(0)
+
+    article_count = len(temp_articles_df)
+
+    return temp_articles_df['unique_customers'].rank(method='dense', ascending=False).astype(int).fillna(article_count + 1)

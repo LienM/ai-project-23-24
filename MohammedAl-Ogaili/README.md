@@ -6,30 +6,30 @@ Here is the rough outline of the project structure. Note that the folders mentio
 
 I have uploaded some check points and the metrics on wetransfer https://we.tl/t-GyTv2BUHeH (expires on 04/01/2024)
 ```
-MohammedAl-Ogaili
-|   README.md
-└───data
-|   // Contains the data both in csv and parquet format (not pushed to repo)
-└───final
-    |   util.ipynb
-    |   SequenceModelExperiments.ipynb
-    |   experiment_template.py
-    |   BaselineExperiments.ipynb
-    └───models
-        └───article_id
-            |   // Contains model checkpoints, graphs, and statistics (not pushed)
-        └───article_id_104
-            |   // Contains model checkpoints, graphs, and statistics (not pushed)
-        └───prod_name
-            |   // Contains model checkpoints, graphs, and statistics (not pushed)
-        └───prod_name_104
-            |   // Contains model checkpoints, graphs, and statistics (not pushed)
-        └───product_type_name
-            |   // Contains model checkpoints, graphs, and statistics (not pushed)
-        └───product_type_name_104
-            |   // Contains model checkpoints, graphs, and statistics (not pushed)
+📦MohammedAl-Ogaili
+ ┣ 📂data
+ ┃ ┗ // Contains the data both in csv and parquet format (not pushed to repo)
+ ┣ 📂final
+ ┃ ┣ 📂models
+ ┃ ┃ ┣ 📂article_id
+ ┃ ┃ ┃ ┗ // Contains model checkpoints, graphs, and statistics (not pushed)
+ ┃ ┃ ┣ 📂article_id_104
+ ┃ ┃ ┃ ┗ // Contains model checkpoints, graphs, and statistics (not pushed)
+ ┃ ┃ ┣ 📂product_type_name
+ ┃ ┃ ┃ ┗ // Contains model checkpoints, graphs, and statistics (not pushed)
+ ┃ ┃ ┣ 📂product_type_name_104
+ ┃ ┃ ┃ ┗ // Contains model checkpoints, graphs, and statistics (not pushed)
+ ┃ ┃ ┣ 📂prod_name
+ ┃ ┃ ┃ ┗ // Contains model checkpoints, graphs, and statistics (not pushed)
+ ┃ ┃ ┗ 📂prod_name_104
+ ┃ ┃   ┗ // Contains model checkpoints, graphs, and statistics (not pushed)
+ ┃ ┣ 📜BaselineExperiments.ipynb
+ ┃ ┣ 📜experiment_template.py
+ ┃ ┣ 📜models.zip
+ ┃ ┣ 📜SequenceModelExperiments.ipynb
+ ┃ ┗ 📜util.ipynb
+ ┗ 📜README.md
 ```
-
 
 To answer my research questions I used the following files:
 

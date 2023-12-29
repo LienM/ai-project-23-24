@@ -1,0 +1,47 @@
+├── KarolZiolo
+│   ├── AI_presentation.pptx
+│   ├── README.md
+│   ├── ReportLatex.tex
+│   ├── ReportPDF.pdf
+│   ├── eda.ipynb
+│   ├── feature_engineering
+│   │   ├── feature_engineering.ipynb
+│   │   └── radek-s-lgbmranker-starter-pack.ipynb
+│   ├── research_plan.png
+│   └── src
+│       ├── article_diversification.ipynb
+│       ├── candidates_generation.ipynb
+│       ├── candidates_helper.py
+│       ├── candidates_summary.ipynb
+│       ├── customer_diversification.ipynb
+│       ├── data_reader.py
+│       ├── evaluation
+│       │   ├── precision
+│       │   ├── precision_personalized.csv
+│       │   ├── recall
+│       │   └── recall_personalized.csv
+│       ├── evaluation.ipynb
+│       ├── helper.py
+│       ├── model.py
+│       ├── models
+│       ├── models_development.ipynb
+│       ├── pipeline.ipynb
+│       └── recommenders.py
+├── data
+│   ├── articles.csv
+│   ├── customers.csv
+│   ├── preprocessed
+│   │   ├── articles.csv
+│   │   ├── articles_decoding.pickle
+│   │   ├── articles_encoding.pickle
+│   │   ├── customers.csv
+│   │   ├── customers_decoding.pickle
+│   │   ├── customers_encoding.pickle
+│   │   ├── transactions.csv
+│   │   ├── transactions_negatives.csv
+│   │   └── transactions_negatives_reduced.csv
+│   ├── sample_submission.csv
+│   ├── transactions_train.csv
+└── submission
+    ├── MLP
+    └── TwoTower
