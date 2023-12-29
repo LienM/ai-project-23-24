@@ -16,15 +16,15 @@ from utils.season import Seasons
 from utils.utils import DataFileNames, load_data_from_hnm, get_data_path, load_data, ProjectConfig
 
 
-def calculate_top_sales(df: pd.DataFrame, start_date: datetime.datetime, end_date: datetime.datetime,
-                        top_x: int = 12) -> pd.DataFrame:
+def calculate_top_seasonal_sales(df: pd.DataFrame, start_date: datetime.datetime, end_date: datetime.datetime,
+                                 top_x: int = 12) -> pd.DataFrame:
     """
     Calculate best-selling seasonal items
     :param df: Dataframe with season scores per item
     :param start_date: Date to start from
     :param end_date: Date to end at
-    :param top_x: Calculate top x best-selling items
-    :return: Dataframe with top x best-selling items for each day
+    :param top_x: Calculate top x best-selling seasonal items
+    :return: Dataframe with top x best-selling seasonal items for each day
     """
     out_df = pd.DataFrame(columns=['date', 'items'])
     out_df['date'] = pd.to_datetime(out_df['date'])
@@ -88,8 +88,8 @@ def _run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, reru
     top_seasonal_sales_df = None
     if not top_seasonal_sales_path.exists() or rerun_seasonal_scores or rerun_all:
         # Calculate top seasonal sales
-        top_seasonal_sales_df = calculate_top_sales(seasonal_scores_df, ProjectConfig.DATA_END,
-                                                    ProjectConfig.DATA_END + datetime.timedelta(days=7))
+        top_seasonal_sales_df = calculate_top_seasonal_sales(seasonal_scores_df, ProjectConfig.DATA_END,
+                                                             ProjectConfig.DATA_END + datetime.timedelta(days=7))
 
         if to_csv:
             top_seasonal_sales_df.to_csv(top_seasonal_sales_path, index=False)
