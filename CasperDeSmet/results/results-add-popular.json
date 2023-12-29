@@ -1,0 +1,24 @@
+{
+    "title": "Recommendations for week 104\nusing text plain average embeddings",
+    "y-axis": "Score",
+    "embeddings":
+    [
+        "add no popular items",
+        "add 5 popular items",
+        "add 12 popular items",
+        "add 20 popular items"
+    ],
+    "submissions":
+    [
+        {
+            "label": "score",
+            "scores":
+            [
+                0.0029882516573240753,
+                0.0013151534844901976,
+                0.0005634525888963771,
+                0.0004368935395928197
+            ]
+        }
+    ]
+}

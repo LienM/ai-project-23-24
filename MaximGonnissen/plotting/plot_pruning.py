@@ -1,11 +1,14 @@
+import matplotlib.pyplot as plt
+
 from pruning.prune_no_purchases import prune_no_purchases
 from pruning.prune_outdated_items import prune_outdated_items
 from utils.utils import load_data_from_hnm, DataFileNames
 
 
-def plot_pruning():
-    import matplotlib.pyplot as plt
-
+def plot_pruning() -> None:
+    """
+    Plots original vs. pruned customer, article, and transaction counts as a bar chart.
+    """
     original_customer_df = load_data_from_hnm(DataFileNames.CUSTOMERS.replace('.csv', '.parquet'))
     original_articles_df = load_data_from_hnm(DataFileNames.ARTICLES.replace('.csv', '.parquet'),
                                               dtype={'article_id': str})

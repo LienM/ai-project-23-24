@@ -1,0 +1,24 @@
+{
+    "title": "Recommendations for week 104 using PCA reduction size 10",
+    "y-axis": "Score",
+    "embeddings":
+    [
+        "baseline",
+        "text plain average",
+        "image",
+        "concatenated"
+    ],
+    "submissions":
+    [
+        {
+            "label": "104",
+            "scores":
+            [
+                0.025080605661718477,
+                0.00122663034856442,
+                0.0010067315523653224,
+                0.001014967953973479
+            ]
+        }
+    ]
+}

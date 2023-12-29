@@ -54,7 +54,6 @@ def verify_submission(df, customers, articles):
     items = df["prediction"].str.split(" ", expand=True)
     print(f'All are 12 items: {items.shape[1] == 12 and items.notna().all().all()}')
 
-    # TODO fix
     items_unique = np.unique(items.values)
     articles_unique = articles['article_id'].unique()
     mask = np.isin(articles_unique, items_unique)
