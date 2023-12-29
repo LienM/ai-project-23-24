@@ -1,0 +1,31 @@
+{
+    "title": "Recommendations for week 104 using specific type of embedding",
+    "y-axis": "Score",
+    "embeddings":
+    [
+        "text plain",
+        "text descriptive",
+        "text elaborative"
+    ],
+    "submissions":
+    [
+        {
+            "label": "class token",
+            "scores":
+            [
+                0.002661550323226012,
+                0.0026303034621545916,
+                0.0026880948298163266
+            ]
+        },
+        {
+            "label": "average",
+            "scores":
+            [
+                0.0029882516573240753,
+                0.002810966063604121,
+                0.002837631340666684
+            ]
+        }
+    ]
+}

@@ -1,0 +1,3 @@
+[submodule "ThomasVanDaele/DGSR"]
+	path = ThomasVanDaele/DGSR
+	url = git@github.com:CRIPAC-DIG/DGSR.git
