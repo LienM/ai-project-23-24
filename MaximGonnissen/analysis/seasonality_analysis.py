@@ -1,6 +1,5 @@
 import datetime
 import json
-import multiprocessing as mp
 import time
 import zipfile
 from io import BytesIO
@@ -126,7 +125,8 @@ def already_ran_for(score_offset: int, day_range: int, kaggle_tool: KaggleTool) 
 
 
 def run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, check_already_ran: bool = False,
-                          do_prune_outdated_items: bool = True, submit_to_kaggle: bool = True, keep_zip: bool = False) -> Optional[BytesIO]:
+                          do_prune_outdated_items: bool = True, submit_to_kaggle: bool = True,
+                          keep_zip: bool = False) -> Optional[BytesIO]:
     """
     Runs seasonal analysis for a given set of parameters. Optionally uploads the results to Kaggle.
     :param max_score_offset: Offset from start of season to max score day.
@@ -148,8 +148,8 @@ def run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, check
     print(f'> Running analysis for max_score_offset={max_score_offset} and max_score_day_range={max_score_day_range}.')
 
     start_time = time.time()
-    output_bytes = _run_seasonal_analysis(max_score_offset, max_score_day_range,
-                                          verbose=False, to_csv=False, do_prune_outdated_items=do_prune_outdated_items)
+    output_bytes = _run_seasonal_analysis(max_score_offset, max_score_day_range, verbose=False, to_csv=False,
+                                          do_prune_outdated_items=do_prune_outdated_items)
 
     print(
         f'> Finished analysis for max_score_offset={max_score_offset} and max_score_day_range={max_score_day_range} in {time.time() - start_time} seconds.')
