@@ -9,91 +9,11 @@ from typing import Union
 
 import pandas as pd
 
+from features.add_season_score import add_season_scores
 from pruning.prune_outdated_items import prune_outdated_items
 from utils.kaggle_tool import KaggleTool
-from utils.progress_bar import ProgressBar
 from utils.season import Seasons
 from utils.utils import DataFileNames, load_data_from_hnm, get_data_path, load_data, ProjectConfig
-
-
-def article_sales_per_date(transactions_df: pd.DataFrame, verbose: bool = True) -> pd.DataFrame:
-    """
-    Calculates sales per date for each article.
-    :param transactions_df: DataFrame containing transactions.
-    :param verbose: Whether to print progress.
-    :return: DataFrame containing sales per date for each article.
-    """
-    start_time = time.time()
-    if verbose:
-        print('[ ] Calculating sales per date for each article...')
-
-    transactions_df_trimmed = transactions_df.copy()
-    transactions_df_trimmed = transactions_df_trimmed[['t_dat', 'article_id']]
-    transactions_df_trimmed['t_dat'] = pd.to_datetime(transactions_df_trimmed['t_dat'])
-
-    transactions_df_trimmed = transactions_df_trimmed.groupby(['article_id', 't_dat']).size().reset_index(name='count')
-
-    if verbose:
-        print(f'[X] Calculated sales per date for each article in {time.time() - start_time:.2f} seconds.')
-
-    return transactions_df_trimmed
-
-
-def calculate_seasonal_sales(df: pd.DataFrame, verbose: bool = True) -> pd.DataFrame:
-    """
-    Given a DataFrame containing sales per date for each article, calculates the seasonal sales numbers for each article.
-    :param df: DataFrame containing sales per date for each article.
-    :param verbose: Whether to print progress.
-    :return: DataFrame containing seasonal sales numbers for each article.
-    """
-    start_time = time.time()
-    if verbose:
-        print('[ ] Calculating seasonal sales numbers for each article...')
-
-    new_df = df.copy()
-    new_df['t_dat'] = pd.to_datetime(new_df['t_dat'])
-    new_df['season'] = new_df['t_dat'].apply(Seasons.get_season)
-    new_df = new_df[['article_id', 'season', 'count']]
-
-    new_df = new_df.groupby(['article_id', 'season']).sum().reset_index()
-
-    if verbose:
-        print(f'[X] Calculated seasonal sales numbers for each article in {time.time() - start_time:.2f} seconds.')
-
-    return new_df
-
-
-def calculate_season_scores(df: pd.DataFrame, max_score_offset: int, max_score_day_range: int,
-                            verbose: bool = True) -> pd.DataFrame:
-    """
-    Given a DataFrame containing sales per date for each article, calculates the seasonal sales numbers for each article.
-    :param df: DataFrame containing sales per date for each article.
-    :param max_score_offset: Offset from start of season to max score day.
-    :param max_score_day_range: Range of days around max score day to calculate score for.
-    :param verbose: Whether to print progress.
-    :return: DataFrame containing seasonal sales numbers for each article.
-    """
-    start_time = time.time()
-    if verbose:
-        print('[ ] Calculating seasonal scores for each article...')
-
-    new_df = df.copy()
-    new_df['t_dat'] = pd.to_datetime(new_df['t_dat'])
-
-    with ProgressBar(Seasons.seasons, show=verbose) as progress_bar:
-        for season in progress_bar:
-            new_df[season.season_name] = new_df['t_dat'].apply(
-                lambda x: season.get_season_score(x, max_score_offset, max_score_day_range))
-
-    new_df = new_df.drop(columns=['t_dat'])
-
-    new_df = new_df.groupby(['article_id']).sum().reset_index()
-    new_df = new_df.drop(columns=['count'])
-
-    if verbose:
-        print(f'[X] Calculated seasonal scores for each article in {time.time() - start_time:.2f} seconds.')
-
-    return new_df
 
 
 def calculate_top_sales(df: pd.DataFrame, start_date: datetime.datetime, end_date: datetime.datetime,
@@ -156,40 +76,14 @@ def _run_seasonal_analysis(max_score_offset: int, max_score_day_range: int, reru
         articles_df, transactions_df = prune_outdated_items(articles_df, transactions_df, cutoff_days=365)
 
     if verbose:
-        print(f"Script started at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.")
         print(
             f"Using season parameters: max_score_offset={max_score_offset}, max_score_day_range={max_score_day_range}.")
 
-    article_sales_per_date_df = None
-    if not article_sales_per_date_path.exists() or rerun_all:
-        # Calculate sales per date for each article
-        article_sales_per_date_df = article_sales_per_date(transactions_df, verbose=verbose)
+    for season in Seasons.seasons:
+        season.set_max_score_offset(max_score_offset)
+        season.set_max_score_day_range(max_score_day_range)
 
-        if to_csv:
-            article_sales_per_date_df.to_csv(article_sales_per_date_path, index=False)
-    else:
-        article_sales_per_date_df = load_data(article_sales_per_date_path, verbose, dtype={'article_id': str})
-
-    seasonal_sales_df = None
-    if not seasonal_sales_path.exists() or rerun_all:
-        # Calculate seasonal sales numbers for each article
-        seasonal_sales_df = calculate_seasonal_sales(article_sales_per_date_df, verbose=verbose)
-
-        if to_csv:
-            seasonal_sales_df.to_csv(seasonal_sales_path, index=False)
-    else:
-        seasonal_sales_df = load_data(seasonal_sales_path, verbose, dtype={'article_id': str})
-
-    seasonal_scores_df = None
-    if not seasonal_scores_path.exists() or rerun_seasonal_scores or rerun_all:
-        # Calculate seasonal scores for each article
-        seasonal_scores_df = calculate_season_scores(article_sales_per_date_df, max_score_offset, max_score_day_range,
-                                                     verbose=verbose)
-
-        if to_csv:
-            seasonal_scores_df.to_csv(seasonal_scores_path, index=False)
-    else:
-        seasonal_scores_df = load_data(seasonal_scores_path, verbose, dtype={'article_id': str})
+    seasonal_scores_df = add_season_scores(transactions_df)
 
     top_seasonal_sales_df = None
     if not top_seasonal_sales_path.exists() or rerun_seasonal_scores or rerun_all:
