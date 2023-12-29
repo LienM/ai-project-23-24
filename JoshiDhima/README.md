@@ -21,18 +21,20 @@
     pip install notebook
     ```
 
-2. Navigate to the directory containing `RQ1_clean.ipynb` in your terminal.
+2. Ensure you have all the necessary requirements installed. This can be done using pip:
+   ```
+   pip install -r requirements.txt
+   ```
 
-3. Run the following command to start Jupyter Notebook:
+3. Install the needed parquet files from radek's starter pack and store them in /data/parquet/. The parquet files can be installed from https://www.kaggle.com/code/marcogorelli/radek-s-lgbmranker-starter-pack-warmup/output
+
+4. Navigate to the directory containing `RQ1_clean.ipynb` in your terminal.
+
+5. Run the following command to start Jupyter Notebook:
     ```
     jupyter notebook
     ```
 
-4. In the Jupyter Notebook dashboard that opens in your web browser, click on `RQ1_clean.ipynb` to open it.
+6. In the Jupyter Notebook dashboard that opens in your web browser, click on `RQ1_clean.ipynb` to open it.
 
-5. You can run the notebook by clicking on `Cell > Run All` in the menu.
-
-Please ensure you have all the necessary Python libraries installed that are imported in the notebook. This can be done by running the following command:
-```
-pip install -r requirements.txt
-```
+7. You can run the notebook by clicking on `Cell > Run All` in the menu.
