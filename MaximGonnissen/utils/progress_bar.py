@@ -1,6 +1,6 @@
-from typing import Collection
 import time
 from math import floor
+from typing import Collection
 
 
 class ASCIIColour:
@@ -24,7 +24,6 @@ class ProgressBar:
     """
     Simple progress bar to display for long-running iterations.
     """
-
     def __init__(self, collection: Collection, bar_length: int = 20, show_count: bool = True,
                  clear_when_done: bool = True, show_estimate: bool = True, full_bar: str = '█', half_bar: str = '▌',
                  empty_bar: str = '░', bar_start: str = '[', bar_end: str = ']', ansi_colour: str = None,
@@ -67,10 +66,18 @@ class ProgressBar:
         self.total = len(collection)
         self.start_time = time.time()
 
-    def has_parent(self):
+    def has_parent(self) -> bool:
+        """
+        Whether this progress bar has a parent.
+        :return: Whether this progress bar has a parent.
+        """
         return self.parent_progress_bar is not None
 
-    def nested_padding(self):
+    def nested_padding(self) -> str:
+        """
+        Get the padding for nested progress bars.
+        :return: Padding.
+        """
         if self.has_parent():
             return self.parent_progress_bar.get_update_string() + self.parent_progress_bar.nested_padding() + '\t'
         else:
@@ -92,20 +99,24 @@ class ProgressBar:
             return 0
         return ((time.time() - self.start_time) / self.count) * (self.total - self.count)
 
-    def __enter__(self):
+    def __enter__(self) -> 'ProgressBar':
         self.count = 0
         self.total = len(self.collection)
         self.start_time = time.time()
         self.update()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         if self.clear_when_done:
             print('\r', end='')
         else:
             self.update()
 
     def get_update_string(self) -> str:
+        """
+        Get the string to use for updating the progress bar.
+        :return: Update string.
+        """
         update_string = f'\r{self.nested_padding()}'
 
         update_string += f'{self.progress_bar_colour or ""}{self.bar_start}'
@@ -137,14 +148,14 @@ class ProgressBar:
 
         return update_string
 
-    def update(self):
+    def update(self) -> None:
         """
         Update the progress bar.
         """
         if self.show:
             print(self.get_update_string() + '    ', end='')
 
-    def iterate(self):
+    def iterate(self) -> iter:
         """
         Iterate over the collection, updating the progress bar.
         """
@@ -159,16 +170,21 @@ class ProgressBar:
 
 
 if __name__ == '__main__':
-    class ExampleCollection:
+    class ExampleCollection(Collection):
+        def __contains__(self, __x) -> bool:
+            if isinstance(__x, int):
+                return 0 <= __x < self.length
+            return False
+
         def __init__(self, length: int):
             self.length = length
 
-        def __len__(self):
+        def __len__(self) -> int:
             return self.length
 
-        def __iter__(self):
-            for i in range(self.length):
-                yield i
+        def __iter__(self) -> iter:
+            for _i in range(self.length):
+                yield _i
 
 
     with ProgressBar(ExampleCollection(100)) as pb:
