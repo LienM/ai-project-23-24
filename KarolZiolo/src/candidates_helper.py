@@ -4,11 +4,26 @@ import matplotlib.pyplot as plt
 
 
 def get_rare_customers(transactions, threshold=5):
+    '''
+    Returns a list of customers who had small number of transactions.
+    Args:
+        transactions: transactions dataframe
+        threshold: number of transactions required to be considered a rare customer
+    Returns:
+        list of customer_ids
+    '''
     grouped = transactions.groupby("customer_id")["article_id"].count()
     rare_customers = grouped[grouped<threshold]
     return list(rare_customers.index)
 
 def assign_season(x):
+    '''
+    Assign seasons to transactions based on the month the transaction was done.
+    Args:
+        x: date of the transaction
+    Returns:
+        season id (1-winter, 2-spring, 3-summer, 4-fall)
+    '''
     if x in [12,1,2]:
         return 1
     elif x in [3,4,5]:
@@ -19,6 +34,21 @@ def assign_season(x):
         return 4 
 
 def bestsellers_age_season(customers, transactions, rare_customers, set_threshold=0.6):
+    '''
+    Returns a list of customer_ids who are buying from bestsellers for given age and season. The propensity index is calculated,
+    which uses article rankings in a given season to determine if a customer was following it. So it takes also into account the season.
+    Args:
+        customers: customers dataframe
+        transactions: transactions dataframe
+        rare_customers: list of customer_ids who had small number of transactions
+        set_threshold: cut of index determining the customers are following bestsellers trends 
+    Returns:
+        list of propensity indices
+        list of customer_ids 
+        dictionary: 
+            keys-age groups
+            values-list of customer_ids who are buying from bestsellers for given age and season
+    '''
     cust_age_id = {}
     #get age groups
     bins = [0,25,40,55,float("inf")]
@@ -58,6 +88,24 @@ def bestsellers_age_season(customers, transactions, rare_customers, set_threshol
     return bestseller_propensity, customers_id, cust_age_id
     
 def index_preferences(transactions, articles, customers, rare_customers, set_threshold=0.8):
+    '''
+    Returns a list of customer_ids who are buying mostly products from the specific clothes segments. 
+    The proportion of clothes from each segment is calculated and if any of that cross the threshold then the customer
+    is considered to be prone to buy products from that segment.
+
+    Args:
+        transactions: transactions dataframe
+        articles: articles dataframe
+        customers: customers dataframe
+        rare_customers: list of customer_ids who had small number of transactions
+        set_threshold: cut of index determining the customers are buying from the specific clothes segments
+    Returns:
+        mens: list of customer_ids who are buying from the mens segment
+        ladies: list of customer_ids who are buying from the ladies segment
+        kids: list of customer_ids who are buying from the kids segment
+        div: list of customer_ids who are buying from the divided segment
+        sprt: list of customer_ids who are buying from the sport segment
+    '''
     transactions = transactions.merge(articles[["article_id", "index_name"]], how="left", on="article_id")
     grouped = transactions.groupby(["customer_id", "index_name"])["article_id"].count()
     percentages = grouped/grouped.groupby(level=0).transform("sum")
@@ -108,6 +156,15 @@ def index_preferences(transactions, articles, customers, rare_customers, set_thr
     return mens, ladies, kid, div, sprt  
 
 def get_discount_hunters(transactions, rare_customers, set_threshold=0.8):
+    '''
+    Generates a list of customers who are mostly interested in the discounted products.
+    Args:
+        transactions: transactions dataframe
+        rare_customers: list of customer_ids who had small number of transactions
+        set_threshold: cut of index determining the customers are buying mostly discounted products
+    Returns:
+        customers: list of customer_ids who are buying mostly discounted products
+    '''
     # determine if the product was sold with discounted price
     transactions["t_dat"] = pd.to_datetime(transactions["t_dat"])
     transactions["month"] = transactions["t_dat"].dt.month 
@@ -136,6 +193,17 @@ def get_discount_hunters(transactions, rare_customers, set_threshold=0.8):
     return discount_hunters
 
 def seasonal_customers(transactions,rare_customers,set_threshold=0.8):
+    '''
+    Generates a list of customers who are mostly interested in the seasonal products.
+    To determine that the proportion of the sales made by customer in a given season is calculated. 
+    If any season cross the threshold the customer is considered as a this specific season customer.
+    Args:
+        transactions: transactions dataframe
+        rare_customers: list of customer_ids who had small number of transactions
+        set_threshold: cut of index determining the customers are buying mostly seasonal products
+    Returns:
+        customers: list of customer_ids who are buying mostly seasonal products
+    '''
     transactions["t_dat"] = pd.to_datetime(transactions["t_dat"])
     transactions["month"] = transactions["t_dat"].dt.month 
     transactions["season"] = transactions["month"].apply(assign_season)
@@ -161,6 +229,16 @@ def seasonal_customers(transactions,rare_customers,set_threshold=0.8):
     return cust_ids
 
 def age_article_candidates(customers, transactions, date_thershold='2020-08-22', article_threshold=500):
+    '''
+    Generates list of article_ids which are strongly popular among specific age group.
+    Args:
+        customers: customers dataframe
+        transactions: transactions dataframe
+        date_thershold: cut of date determining starting date of transactions that are considered
+        article_threshold: threshold determining top-k articles
+    Returns:
+        article_age_indices: dictionary of article_ids for each age group
+    '''
     #get age groups
     bins = [0,25,40,55,float("inf")]
     labels = ["young_preference","adult_preferences","middle_aged_preference","senior_preference"]
@@ -183,6 +261,14 @@ def age_article_candidates(customers, transactions, date_thershold='2020-08-22',
     return article_age_indices
         
 def get_discounted_articles(transactions, date_threshold='2020-08-22'):
+    '''
+    Generates a list of article_ids which are considered as discounted products.
+    Args:
+        transactions: transactions dataframe
+        date_threshold: cut of date determining starting date of transactions that are considered
+    Returns:
+        discounted_articles: list of article_ids considered as discounted products
+    '''
     transactions = transactions[transactions["t_dat"]>date_threshold]
     grouped = transactions.groupby("article_id")["price"].median()
     grouped = grouped.rename("normal_price")
@@ -192,6 +278,15 @@ def get_discounted_articles(transactions, date_threshold='2020-08-22'):
     return list(discounted_articles)
     
 def get_season_articles(transactions, season="autumn", set_threshold=0.8):
+    '''
+    Generates a list of article_ids which are considered as seasonal products.
+    Args:
+        transactions: transactions dataframe
+        season: season to be considered
+        set_threshold: cut of index determining the the product is considered as seasonal one
+    Returns:
+        season_articles: list of article_ids considered as seasonal products
+    '''
     season_id = {"winter":1,"spring":2,"summer":3,"autumn":4}
     transactions["t_dat"] = pd.to_datetime(transactions["t_dat"])
     transactions["month"] = transactions["t_dat"].dt.month 
