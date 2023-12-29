@@ -8,6 +8,26 @@ This is a repository for my second (main) research question:
 
 Everything in this folder (`05-Research/`) is related to this second (main) research question and **should be looked at** for the total evaluation of this project.
 
+The **methodoly** is as follows:
+
+1) Create the 3 features.
+   - Mean_price_per_c (average purchasing price of the customer), 
+   - Highest_count_ign_per_c (most bought article index_group_name of the customer),
+   - Mean_age_per_a (average age of everyone that bought the article).
+
+2) Change candidate generation by doing selection based on the 3 features.
+
+    Per customer, out of all the unique articles, select:
+   1) all candidates where highest_count_ign_per_c is equal to index_group_name.
+   2) From the above, the top 50 based on smallest difference between price and mean_price_per_c.
+   3) From the above, the top 12 based on smallest difference between age and mean_age_per_a.
+
+    Result is dataframe with (12*nr_of_unique_customers) rows.
+
+3) For evaluation: How different is what it recommends from what the baseline recommends? Does the method recommend mostly items that are frequently bought, or not at all? Use Recall metric.
+
+4) Add features to LGBM ranker and compare scores.
+
 
 ## Dependencies
 The dependencies are listed in the requirements.txt file. 
