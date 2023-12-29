@@ -1,0 +1,31 @@
+{
+    "title": "Recommendations for week 105 using specific type of embedding",
+    "y-axis": "Score",
+    "embeddings":
+    [
+        "text plain",
+        "text descriptive",
+        "text elaborative"
+    ],
+    "submissions":
+    [
+        {
+            "label": "class token",
+            "scores":
+            [
+                0.00231,
+                0.00205,
+                0.00232
+            ]
+        },
+        {
+            "label": "average",
+            "scores":
+            [
+                0.00247,
+                0.00218,
+                0.00244
+            ]
+        }
+    ]
+}

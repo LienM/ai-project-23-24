@@ -12,7 +12,7 @@ class CalendarDay:
         self.doy = doy
         self.clamp()
 
-    def clamp(self):
+    def clamp(self) -> None:
         """
         Clamps the day of year between min and max day, with overflow and underflow correction.
         """
@@ -20,13 +20,13 @@ class CalendarDay:
         if self.doy < self.min_day:
             self.doy = -self.doy % self.max_day + self.max_day
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.doy)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.__str__()
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         if isinstance(other, CalendarDay):
             return self.doy == other.doy
         elif isinstance(other, int):
@@ -34,7 +34,7 @@ class CalendarDay:
         else:
             return False
 
-    def __lt__(self, other):
+    def __lt__(self, other) -> bool:
         if isinstance(other, CalendarDay):
             return self.doy < other.doy
         elif isinstance(other, int):
@@ -42,7 +42,7 @@ class CalendarDay:
         else:
             raise TypeError(f'Cannot compare CalendarDay to {type(other)}.')
 
-    def __le__(self, other):
+    def __le__(self, other) -> bool:
         if isinstance(other, CalendarDay):
             return self.doy <= other.doy
         elif isinstance(other, int):
@@ -50,7 +50,7 @@ class CalendarDay:
         else:
             raise TypeError(f'Cannot compare CalendarDay to {type(other)}.')
 
-    def __gt__(self, other):
+    def __gt__(self, other) -> bool:
         if isinstance(other, CalendarDay):
             return self.doy > other.doy
         elif isinstance(other, int):
@@ -58,7 +58,7 @@ class CalendarDay:
         else:
             raise TypeError(f'Cannot compare CalendarDay to {type(other)}.')
 
-    def __ge__(self, other):
+    def __ge__(self, other) -> bool:
         if isinstance(other, CalendarDay):
             return self.doy >= other.doy
         elif isinstance(other, int):
@@ -66,10 +66,10 @@ class CalendarDay:
         else:
             raise TypeError(f'Cannot compare CalendarDay to {type(other)}.')
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.doy)
 
-    def __add__(self, other):
+    def __add__(self, other) -> 'CalendarDay':
         if isinstance(other, CalendarDay):
             return CalendarDay(self.doy + other.doy)
         elif isinstance(other, int):
@@ -77,7 +77,7 @@ class CalendarDay:
         else:
             raise TypeError(f'Cannot add CalendarDay to {type(other)}.')
 
-    def __sub__(self, other):
+    def __sub__(self, other) -> 'CalendarDay':
         if isinstance(other, CalendarDay):
             return CalendarDay(self.doy - other.doy)
         elif isinstance(other, int):
@@ -85,10 +85,12 @@ class CalendarDay:
         else:
             raise TypeError(f'Cannot subtract CalendarDay from {type(other)}.')
 
-    def days_until(self, other) -> int:
-        if not isinstance(other, CalendarDay):
-            raise TypeError(f'Cannot calculate days between CalendarDay and {type(other)}.')
-
+    def days_until(self, other: 'CalendarDay') -> int:
+        """
+        Returns the number of days until the other day. Only counts forward.
+        :param other: Other day
+        :return: Number of days until other day
+        """
         if self.doy == other.doy:
             return 0
         elif self.doy > other.doy:
@@ -96,10 +98,12 @@ class CalendarDay:
         else:
             return other.doy - self.doy
 
-    def distance_from(self, other) -> int:
-        if not isinstance(other, CalendarDay):
-            raise TypeError(f'Cannot calculate days between CalendarDay and {type(other)}.')
-
+    def distance_from(self, other: 'CalendarDay') -> int:
+        """
+        Returns the distance between two days. Counts both forward and backward, and returns the shortest distance.
+        :param other: Other day
+        :return: Distance between two days
+        """
         return min(self.days_until(other), other.days_until(self))
 
 
@@ -107,6 +111,9 @@ class Season:
     """
     Season class that holds information about a season.
     """
+    max_score_day_range = 30
+    max_score_offset = 0
+
     def __init__(self, season_name: str, start_doy: CalendarDay, end_doy: CalendarDay):
         """
         :param season_name: Season name
@@ -114,41 +121,51 @@ class Season:
         :param end_doy: End day of year
         """
         self.season_name = season_name
+
         if isinstance(start_doy, int):
             start_doy = CalendarDay(start_doy)
         self.start_doy = start_doy
+
         if isinstance(end_doy, int):
             end_doy = CalendarDay(end_doy)
         self.end_doy = end_doy
 
-    def max_score_day(self, max_score_offset: int) -> CalendarDay:
-        return self.start_doy + max_score_offset
+        self.season_length = self.end_doy.distance_from(self.start_doy)
+        self.max_score_day = self.start_doy + self.max_score_offset
 
-    def __str__(self):
+    def set_max_score_offset(self, max_score_offset: int) -> None:
+        """
+        Sets the max score offset.
+        :param max_score_offset: Max score offset
+        """
+        self.max_score_offset = max_score_offset
+        self.max_score_day = self.start_doy + self.max_score_offset
+
+    def set_max_score_day_range(self, max_score_day_range: int) -> None:
+        """
+        Sets the max score day range.
+        :param max_score_day_range: Max score day range
+        """
+        self.max_score_day_range = max_score_day_range
+
+    def __str__(self) -> str:
         return self.season_name
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.__str__()
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         if isinstance(other, Season):
             return self.season_name == other.season_name
         else:
             return False
 
-    def __lt__(self, other):
+    def __lt__(self, other) -> bool:
         if isinstance(other, Season):
             return self.start_doy < other.start_doy
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.season_name)
-
-    def season_length(self) -> int:
-        """
-        Returns the length of the season in days.
-        :return: Length of the season in days.
-        """
-        return self.start_doy.distance_from(self.end_doy)
 
     def in_season(self, date: pd.Timestamp) -> bool:
         """
@@ -156,28 +173,33 @@ class Season:
         :param date: Date to check
         :return: True if date is in season, False otherwise.
         """
-        date_doy = date.dayofyear
-        calendar_day = CalendarDay(date_doy)
-        return calendar_day.days_until(self.end_doy) <= self.season_length()
+        return CalendarDay(date.dayofyear).days_until(self.end_doy) <= self.season_length
 
-    def get_season_score(self, date: pd.Timestamp, max_score_offset: int, max_score_day_range: int) -> float:
+    def get_season_score(self, date: pd.Timestamp) -> float:
         """
         Returns the season score of the item for the given date.
         :param date: Date to get season score for.
-        :param max_score_offset: Offset from start of season to max score day.
-        :param max_score_day_range: Range of days around max score day to calculate score for.
         :return: Season score for given date.
         """
-        date_doy = date.dayofyear
-        calendar_day = CalendarDay(date_doy)
-        distance_from = calendar_day.distance_from(self.max_score_day(max_score_offset))
-        score = max(0, max_score_day_range - distance_from)
-        return score
+        return max(0, (self.max_score_day_range * 2) - CalendarDay(date.dayofyear)
+                   .distance_from(self.max_score_day + self.max_score_day_range))
 
 
-seasons = [
-    Season('spring', 60, 151),
-    Season('summer', 152, 243),
-    Season('fall', 244, 334),
-    Season('winter', 335, 59)
-]
+class Seasons:
+    seasons = [
+        Season('spring', 60, 151),
+        Season('summer', 152, 243),
+        Season('fall', 244, 334),
+        Season('winter', 335, 59)
+    ]
+
+    @classmethod
+    def get_season(cls, date: pd.Timestamp) -> Season:
+        """
+        Returns the season for a given date.
+        :param date: Date to get season for.
+        :return: Season for given date.
+        """
+        for season in cls.seasons:
+            if season.in_season(date):
+                return season

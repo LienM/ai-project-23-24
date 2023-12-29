@@ -1,20 +1,10 @@
-from utils.utils import get_data_path, DataFileNames, load_data_from_hnm
-from utils.progress_bar import ProgressBar, ASCIIColour
 import multiprocessing as mp
 import time
 
 import pandas as pd
 
-
-class AgeGroup:
-    """
-    Static class to hold age group constants.
-    """
-    YOUNG = '0-20'
-    YOUNG_ADULT = '20-30'
-    ADULT = '30-40'
-    MIDDLE_AGED = '40-60'
-    OLD = '60+'
+from utils.progress_bar import ProgressBar, ASCIIColour
+from utils.utils import get_data_path, DataFileNames, load_data_from_hnm
 
 
 def add_month_year_features(df: pd.DataFrame):
