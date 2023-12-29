@@ -4,6 +4,7 @@ import numpy as np
 import torch
 
 class MLP1(nn.Module):
+    '''MLP model with 1 hidden layer'''
     def __init__(self, input_dim, output_dim):
         super(MLP1, self).__init__()
         self.fc1 = nn.Linear(input_dim, 100)
@@ -15,6 +16,7 @@ class MLP1(nn.Module):
         return x
 
 class MLP2(nn.Module):
+    '''MLP model with 2 hidden layers'''
     def __init__(self, input_dim, output_dim):
         super(MLP2, self).__init__()
         self.fc1 = nn.Linear(input_dim, 500)
@@ -28,6 +30,7 @@ class MLP2(nn.Module):
         return x
     
 class CustomerTower(nn.Module):
+    '''Customer Tower model with 1 hidden layer'''
     def __init__(self, input_customer_dim, output_dim=3):
         super(CustomerTower,self).__init__()
         self.fc1 = nn.Linear(input_customer_dim, 5)
@@ -40,6 +43,7 @@ class CustomerTower(nn.Module):
         return x
     
 class ArticleTower(nn.Module):
+    '''Article Tower model with 1 hidden layer'''
     def __init__(self, input_article_dim, output_dim=3):
         super(ArticleTower,self).__init__()
         self.fc1 = nn.Linear(input_article_dim, 5)
@@ -52,6 +56,7 @@ class ArticleTower(nn.Module):
         return x
 
 class TwoTower(nn.Module):
+    '''Two Tower model with shallow Customer Tower and Article Tower'''
     def __init__(self, input_article_dim, input_customer_dim, output_dim=3):
         super(TwoTower,self).__init__()
         # Article tower
@@ -67,6 +72,7 @@ class TwoTower(nn.Module):
         return torch.sigmoid(torch.matmul(customer_features,article_features.T).diag())
 
 class ArticleTowerEmbedded(nn.Module):
+    '''Article Tower with embedded layers'''
     def __init__(self, article_cat_dim, embedding_dim=3, output_dim=3):
         super(ArticleTowerEmbedded, self).__init__()
         self.embedding_layers = nn.ModuleList([
@@ -90,6 +96,7 @@ class ArticleTowerEmbedded(nn.Module):
             return x
 
 class TwoTowerEmbedded(nn.Module):
+    '''Two Tower model with embedded Article Tower and shallow Customer Tower'''
     def __init__(self, article_cat_dim, input_customer_dim, embedding_dim=5, output_dim=3):
         super(TwoTowerEmbedded, self).__init__()
         # Article tower
@@ -106,6 +113,7 @@ class TwoTowerEmbedded(nn.Module):
         return torch.sigmoid(torch.matmul(c_features, a_features.to(c_features.dtype).T).diag())
 
 class ArticleTowerLog(nn.Module):
+    '''Article Tower with deep layers'''
     def __init__(self, input_article_dim, output_dim=3):
         super(ArticleTowerLog,self).__init__()
         self.fc1 = nn.Linear(input_article_dim, 250)
@@ -122,6 +130,7 @@ class ArticleTowerLog(nn.Module):
         return x
     
 class LogisticRegression(nn.Module):
+    '''Logistic Regression model with deep Article Tower and seperate list of linear layers for each customer'''
     def __init__(self, input_article_dim, input_customer_dim, output_dim=3):
         super(LogisticRegression, self).__init__()
 
@@ -149,6 +158,7 @@ class LogisticRegression(nn.Module):
         return customer_probabilities
 
 class CustomerTowerFinal(nn.Module):
+    '''Customer Tower model with 1 layer'''
     def __init__(self, input_customer_dim, output_dim=10):
         super(CustomerTowerFinal,self).__init__()
         self.fc1 = nn.Linear(input_customer_dim, output_dim)
@@ -159,6 +169,7 @@ class CustomerTowerFinal(nn.Module):
         return x
     
 class ArticleTowerFinal(nn.Module):
+    '''Article Tower model with 3 hidden layers'''
     def __init__(self, input_article_dim, output_dim=10):
         super(ArticleTowerFinal,self).__init__()
         self.fc1 = nn.Linear(input_article_dim, 250)
@@ -175,6 +186,7 @@ class ArticleTowerFinal(nn.Module):
         return x
 
 class TwoTowerFinal(nn.Module):
+    '''Two Tower model with shallow Customer Tower and deep Article Tower'''
     def __init__(self, input_article_dim, input_customer_dim, output_dim=10):
         super(TwoTowerFinal,self).__init__()
         # Article tower
@@ -190,6 +202,7 @@ class TwoTowerFinal(nn.Module):
         return torch.sigmoid(torch.matmul(customer_features,article_features.T).diag())
 
 class CustomerTowerDiversification(nn.Module):
+    '''Customer Tower model with 3 hidden layers'''
     def __init__(self, input_customer_dim, output_dim=10):
         super(CustomerTowerDiversification,self).__init__()
         self.fc1 = nn.Linear(input_customer_dim, 250)
@@ -206,6 +219,7 @@ class CustomerTowerDiversification(nn.Module):
         return x
 
 class TwoTowerCustomer(nn.Module):
+    '''Two Tower model with deep Customer Tower and Article Tower'''
     def __init__(self, input_article_dim, input_customer_dim, output_dim=10):
         super(TwoTowerCustomer,self).__init__()
         # Article tower

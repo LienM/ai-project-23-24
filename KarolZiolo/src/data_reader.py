@@ -26,6 +26,23 @@ TRANSACTION_PATH = "/Users/karol/Desktop/Antwerp/ai_project/data/transactions_tr
 #                                 Data Transformations                                #
 #######################################################################################
 def data_preprocessing(feature_generation=False, return_encodings=False, save=False):
+    '''
+    Responsible for preprocessing the data. It includes opreations such as article encoding or customers encodings. Also handles missing data. 
+    There is also function which does some basic feature engineering based on the feature_engineering.ipynb file but ultimately it is not used.
+    Please adjust the paths stated above for required dataframes.
+    Args:
+        feature_generation: boolean indicating whether to perform feature engineering or not
+        return_encodings: boolean indicating whether to return the encodings or not
+        save: boolean indicating whether to save preprocessed dataframes and encodings
+    Returns:
+        transactions: preprocessed transactions dataframe
+        customers: preprocessed customers dataframe
+        articles: preprocessed articles dataframe
+        article_encodings: dictionary of article encodings
+        customer_encodings: dictionary of customer encodings
+        article_decodings: dictionary of article decodings
+        customer_decodings: dictionary of customer decodings
+    '''
     customers = pd.read_csv(CUSTOMER_PATH)
     transactions = pd.read_csv(TRANSACTION_PATH)
     articles = pd.read_csv(ARTICLES_PATH)
@@ -127,6 +144,14 @@ def data_preprocessing(feature_generation=False, return_encodings=False, save=Fa
         return transactions, articles, customers
 
 def customer_buckets(transactions, train_test=True):
+    '''
+    Responsible for creating customer buckets.
+    Args:
+        transactions: transactions dataframe
+        train_test: boolean indicating whether to split the dataset into train and test or not
+    Returns:
+        customer_buckets: dictionary of customers buckets
+    '''
     # last purchase for customer
     if train_test:
         customer_last_purchase = transactions.groupby('customer_id')['t_dat'].max()
@@ -145,6 +170,14 @@ def customer_buckets(transactions, train_test=True):
         return customer_buckets
 
 def split_transactions(transactions):
+    '''
+    Helper for splitting transactions to create train and validation transactions. The last bought products are considered as a validation set.
+    Args:
+        transactions: transactions dataframe
+    Returns:
+        x_transactions: train transactions dataframe
+        y_transactions: validation transactions dataframe
+    '''
     customer_last_purchase = transactions.groupby('customer_id')['t_dat'].max()
     merged = transactions.merge(customer_last_purchase, on='customer_id', suffixes=('', '_last_purchase'))
     # filter train and test dataset
@@ -153,6 +186,15 @@ def split_transactions(transactions):
     return x_transactions, y_transactions
 
 def matrix_representation(transactions, train_test=True):
+    '''
+    Responsible for creating customer buckets and represensting as a matrix where rows represent customers and columns articles.
+    Args:
+        transactions: transactions dataframe
+        train_test: boolean indicating whether to split the dataset into train and test or not
+    Returns:
+        x_mattrix: np.array of shape (customer_size, article_size) representing training transactions
+        y_transactions: np.array of shape (customer_size, article_size) representing validation transactions
+    '''
     customer_size = np.max(transactions['customer_id'])+1
     article_size = 105542
     if train_test:
@@ -193,6 +235,15 @@ def matrix_representation(transactions, train_test=True):
         return matrix
 
 def create_random_candidates(transactions, save_dir=None, num_sample=30_000_000):
+    '''
+    Responsible for creating negative samples using random candidates.
+    Args:
+        transactions: transactions dataframe
+        save_dir: path to save the dataframe
+        num_sample: number of negative samples
+    Returns:
+        shuffled_df: shuffled dataframe representing transactions with negative samples
+    '''
     # get unique customers and articles
     unique_customers = transactions['customer_id'].unique()
     unique_articles = transactions['article_id'].unique()
@@ -216,6 +267,9 @@ def create_random_candidates(transactions, save_dir=None, num_sample=30_000_000)
     return shuffled_df
 
 def articles_embbedings():
+    '''
+    Responsible for creating article embeddings.
+    '''
     # read article and customer data
     articles = pd.read_csv("data/preprocessed/articles.csv") 
     # set indices
@@ -259,6 +313,9 @@ class SparseDataset(Dataset):
         return self.data.shape[0]
 
 class DatasetMF(Dataset):
+    '''
+    Dataset that handles data for matrix factorization/Two Tower models.
+    '''
     def __init__(self,trans:pd.DataFrame, transform:bool = None):
         self.transactions = trans
 
@@ -272,6 +329,9 @@ class DatasetMF(Dataset):
         return self.transactions.shape[0]
 
 class SingleDataset(Dataset):
+    '''
+    Dataset that handles data for articles and customers datasets seperately.
+    '''
     def __init__(self, df:csr_matrix, transform:bool = None):
         self.df = df
 
@@ -358,6 +418,17 @@ def MF_batch_collate(batch:list):
 #######################################################################################
 
 def load_data(transactions, train_test=True, batch_size=1000):
+    '''
+    Data loader used for training MLP models. It creates matrix representations of transactions. Also splits the dataset into train and validation sets.
+    Uses also batches while loading. 
+    Args:
+        transactions: transactions dataframe
+        train_test: boolean value to indicate if the dataset should be split into train and validation sets
+        batch_size: batch size for the data loader
+    Returns:
+        train_dataloader: pytorch data loader for the train set
+        val_dataloader: pytorch data loader for the validation set
+    '''
     if train_test:
         # matrix representation
         x_matrix, y_matrix = matrix_representation(transactions, train_test=train_test)
@@ -380,6 +451,16 @@ def load_data(transactions, train_test=True, batch_size=1000):
         return dataloader
 
 def load_data_mf(trans:pd.DataFrame, batch_size=1000):
+    '''
+    Data loader used for training matrix factorization models. It splits the dataset into train and validation sets.
+    It uses also batches while loading. 
+    Args:
+        trans: transactions dataframe
+        batch_size: batch size for the data loader
+    Returns:
+        train_dataloader: pytorch data loader for the train set
+        val_dataloader: pytorch data loader for the validation set
+    '''
     test_fraction = 0.1
     unique_customers = trans['customer_id'].unique()
     train_customers, test_customers = train_test_split(unique_customers, test_size=test_fraction, random_state=42)
@@ -394,6 +475,17 @@ def load_data_mf(trans:pd.DataFrame, batch_size=1000):
     return train_dataloader, val_dataloader, test_customers
 
 def load_customers_articles(customers, articles, test_customers=[], batch_size=1000):
+    '''
+    Data loader used by recommender systems to generate recommendations.
+    Args:
+        customers: customers dataframe
+        articles: articles dataframe
+        test_customers: list of customers to be used for testing
+        batch_size: batch size for the data loader
+    Returns:
+        dataloader_cust: pytorch data loader for the train set
+        dataloader_art: pytorch data loader for the validation set
+    '''
     if len(test_customers)!=0:
         customers = customers[test_customers]
     dataset_cust = SingleDataset(customers)
@@ -407,6 +499,9 @@ def load_customers_articles(customers, articles, test_customers=[], batch_size=1
 #######################################################################################
 
 def sales_channel_preference(customers, transactions):
+    '''
+    Generates sales channel preference features for customers.
+    '''
     grouped = transactions.groupby(["customer_id", "sales_channel_id"])["article_id"].count()
     percentages = grouped / grouped.groupby(level=0).transform("sum")
     # create first_cahnnel feature
@@ -422,6 +517,7 @@ def sales_channel_preference(customers, transactions):
     return customers
 
 def favourite_colour(customers, articles, transactions, quarter=4):
+    ''' Generates favourite colour features for customers for a specific quarter of the year.'''
     # get specific quarter we are interested in
     transactions["t_dat"] = pd.to_datetime(transactions["t_dat"])
     transactions["quarter"] = transactions["t_dat"].dt.quarter  
@@ -439,6 +535,7 @@ def favourite_colour(customers, articles, transactions, quarter=4):
     return customers
 
 def preferred_garment(customers, articles, transactions):
+    ''' Generates preferred garment features for customers.'''
     transactions = transactions.merge(articles[["article_id","garment_group_name"]], how="left", on="article_id")
     grouped = transactions.groupby(["customer_id", "garment_group_name"])["article_id"].count()
     percentages = grouped / grouped.groupby(level=0).transform("sum")
@@ -450,6 +547,7 @@ def preferred_garment(customers, articles, transactions):
     return customers
 
 def avg_price(customers, transactions):
+    '''Generates average price features for customers.'''
     avg_grouped = transactions.groupby("customer_id")["price"].mean()
     avg_grouped = avg_grouped.rename("avg_price")
     customers = customers.merge(avg_grouped, how="left", on="customer_id")
@@ -457,6 +555,7 @@ def avg_price(customers, transactions):
     return customers
     
 def amount_purchases(customers, transactions, date_thrashold="2020-08-22"):
+    '''Generates amount purchases features for customers based on recent transactions.'''
     # select recent transactions
     transactions["t_dat"] = pd.to_datetime(transactions["t_dat"])
     transactions = transactions[transactions["t_dat"]>date_thrashold]
@@ -468,6 +567,7 @@ def amount_purchases(customers, transactions, date_thrashold="2020-08-22"):
     return customers
 
 def sex_kid_estimation(customers, articles, transactions):
+    '''States the proportion of the sex, kid and menswear products bought by customers.'''
     transactions = transactions.merge(articles[["article_id", "index_name"]], how="left", on="article_id")
     grouped = transactions.groupby(["customer_id", "index_name"])["article_id"].count()
     percentages = grouped/grouped.groupby(level=0).transform("sum")
@@ -489,6 +589,7 @@ def sex_kid_estimation(customers, articles, transactions):
     return customers
 
 def customer_clustering(customers,transactions, articles):
+    '''Generates customer clusters based on index name (ultimately not used).'''
     merged = transactions.merge(articles[["article_id","product_type_name","index_name","garment_group_name"]], on="article_id")
 
     # Get customers baskets
@@ -516,6 +617,7 @@ def customer_clustering(customers,transactions, articles):
     return customers
 
 def customers_diversification(customers, transactions, articles):
+    '''Generates customer diversification features for customers.'''
     customers = sales_channel_preference(customers, transactions)
     customers = favourite_colour(customers, articles, transactions, quarter=4)
     customers = preferred_garment(customers, articles, transactions)
@@ -540,6 +642,7 @@ def assign_season(x):
         return 4 
 
 def seasonal_sales(a, t):
+    '''Generates seasonal sales features for articles.They represent the proportion of their sales in the specific season.'''
     # get seasons
     t["t_dat"] = pd.to_datetime(t["t_dat"])
     t["month"] = t["t_dat"].dt.month 
@@ -571,6 +674,7 @@ def seasonal_sales(a, t):
     return a
 
 def get_avg_price(a, t):
+    '''Generates the average price that product has been sold.'''
     grouped = t.groupby("article_id")["price"].mean()
     grouped = grouped.rename("avg_price")
     a = a.merge(grouped, how="left", on="article_id")
@@ -578,6 +682,7 @@ def get_avg_price(a, t):
     return a
 
 def seasonal_bestseller_ranking(a, t):
+    '''Ranks articles based on their sales in a given season.'''
     # get seasons
     t["t_dat"] = pd.to_datetime(t["t_dat"])
     t["month"] = t["t_dat"].dt.month 
@@ -600,6 +705,7 @@ def seasonal_bestseller_ranking(a, t):
     return a
 
 def age_articles_preference(a,t,c):
+    '''Generates the age group distribution for articles.'''
     bins = [0,25,40,55,float("inf")]
     labels = ["young_preference","adult_preferences","middle_aged_preference","senior_preference"]
     c["age_group"] = pd.cut(c["age"], bins=bins, labels=labels, right=False)
@@ -617,6 +723,7 @@ def age_articles_preference(a,t,c):
     return a
 
 def articles_sales_channel(a,t):
+    '''Generates sales channel distribution for articles.'''
     grouped = t.groupby(["article_id", "sales_channel_id"])["customer_id"].count()
     percentages = grouped / grouped.groupby(level=0).transform("sum")
     for channel in t["sales_channel_id"].unique():
@@ -628,6 +735,7 @@ def articles_sales_channel(a,t):
     return a
 
 def articles_diversification(articles, transactions, customers):
+    '''Generates articles diversification features for articles.'''
     articles = seasonal_sales(articles, transactions)
     articles = get_avg_price(articles, transactions)
     articles = seasonal_bestseller_ranking(articles, transactions)
