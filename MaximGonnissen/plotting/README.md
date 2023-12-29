@@ -9,3 +9,7 @@ Plots male, female, and unknown gender counts as a bar chart.
 ## [plot_pruning.py](plot_pruning.py)
 
 Plots the number of customers, articles, and transactions before and after pruning.
+
+## [plot_scoring_graph.py](plot_scoring_graph.py)
+
+Plots a scoring graph for seasonal experiments.
